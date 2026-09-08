@@ -1,0 +1,10 @@
+{
+  "name": "copiloto-alerts",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Radares fijos e incidencias de la DGT (DATEX II) convertidos a capas JSON por celdas para Copiloto, mas el catalogo de tipos de reporte.",
+  "engines": { "node": ">=24.0.0" },
+  "scripts": { "run": "node src/cli.ts run --out out" },
+  "dependencies": { "fast-xml-parser": "^5.2.5" }
+}
