@@ -1,4 +1,4 @@
-import { parseXml, pick, num } from './xml.ts';
+import { parseXml, pick, num, collect } from './xml.ts';
 
 export interface Radar {
   id: string;
@@ -56,15 +56,4 @@ function coords(pc: any): { lat: number; lng: number } | undefined {
   const lat = num(pick(pc, 'latitude'));
   const lng = num(pick(pc, 'longitude'));
   return lat !== undefined && lng !== undefined ? { lat, lng } : undefined;
-}
-
-/** Recorre el árbol y devuelve todos los nodos con esa clave (el XML de la DGT anida los inventarios a distinta profundidad). */
-export function collect(node: any, key: string, acc: any[] = []): any[] {
-  if (node == null || typeof node !== 'object') return acc;
-  if (Array.isArray(node)) { for (const n of node) collect(n, key, acc); return acc; }
-  for (const [k, v] of Object.entries(node)) {
-    if (k === key) { if (Array.isArray(v)) acc.push(...v); else acc.push(v); }
-    else collect(v, key, acc);
-  }
-  return acc;
 }
