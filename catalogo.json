@@ -1,0 +1,29 @@
+{
+  "version": 1,
+  "types": [
+    { "key": "police", "name": "Policía", "family": "police", "icon": "local_police", "color": "#2563EB", "enabled": true, "ttlMin": 15, "extendMin": 8, "priority": 2,
+      "voice": { "announce": "Policía a {distance}", "near": "Policía", "synonyms": ["policía", "policia", "guardia civil", "control"] }, "subtypes": [] },
+    { "key": "mobile_camera", "name": "Radar móvil", "family": "radars", "icon": "speed", "color": "#7C3AED", "enabled": true, "ttlMin": 30, "extendMin": 15, "priority": 2,
+      "voice": { "announce": "Radar móvil a {distance}", "near": "Radar móvil", "synonyms": ["radar móvil", "radar movil", "radar", "cinemómetro", "furgoneta"] }, "subtypes": [] },
+    { "key": "fixed_camera", "name": "Radar fijo", "family": "radars", "icon": "photo_camera", "color": "#7C3AED", "enabled": true, "ttlMin": 0, "extendMin": 0, "priority": 2, "official": true,
+      "voice": { "announce": "Radar a {distance}", "announceWithLimit": "Radar a {distance}, límite {limit}", "near": "Radar", "synonyms": [] }, "subtypes": [] },
+    { "key": "accident", "name": "Accidente", "family": "hazards", "icon": "car_crash", "color": "#DC2626", "enabled": true, "ttlMin": 45, "extendMin": 20, "priority": 2,
+      "voice": { "announce": "Accidente a {distance}", "synonyms": ["accidente", "choque", "colisión", "colision"] },
+      "subtypes": [ { "key": "minor", "name": "Leve" }, { "key": "major", "name": "Grave" } ] },
+    { "key": "hazard", "name": "Peligro en la vía", "family": "hazards", "icon": "warning", "color": "#F97316", "enabled": true, "ttlMin": 60, "extendMin": 30, "priority": 2,
+      "voice": { "announce": "Peligro en la vía a {distance}", "synonyms": ["peligro", "objeto", "animal", "obstáculo", "obstaculo", "bache"] },
+      "subtypes": [ { "key": "road", "name": "En la calzada" }, { "key": "shoulder", "name": "En el arcén" }, { "key": "animal", "name": "Animal" }, { "key": "object", "name": "Objeto" } ] },
+    { "key": "closure", "name": "Corte o carril cerrado", "family": "traffic", "icon": "block", "color": "#B91C1C", "enabled": true, "ttlMin": 360, "extendMin": 180, "priority": 2,
+      "voice": { "announce": "Corte a {distance}", "synonyms": ["corte", "cortada", "carril cerrado", "cerrado"] },
+      "subtypes": [ { "key": "road", "name": "Carretera cortada" }, { "key": "lane", "name": "Carril cerrado" } ] },
+    { "key": "jam", "name": "Retención", "family": "traffic", "icon": "traffic", "color": "#EA580C", "enabled": true, "ttlMin": 20, "extendMin": 10, "priority": 1,
+      "voice": { "announce": "Retención a {distance}", "synonyms": ["retención", "retencion", "atasco", "tráfico", "trafico", "caravana"] }, "subtypes": [] },
+    { "key": "roadworks", "name": "Obras", "family": "traffic", "icon": "construction", "color": "#CA8A04", "enabled": true, "ttlMin": 240, "extendMin": 120, "priority": 1,
+      "voice": { "announce": "Obras a {distance}", "synonyms": ["obras", "obra"] }, "subtypes": [] },
+    { "key": "weather", "name": "Tiempo", "family": "weather", "icon": "cloud", "color": "#0284C7", "enabled": true, "ttlMin": 60, "extendMin": 30, "priority": 1,
+      "voice": { "announce": "Mal tiempo a {distance}", "synonyms": ["lluvia", "niebla", "hielo", "viento", "nieve", "granizo"] },
+      "subtypes": [ { "key": "rain", "name": "Lluvia fuerte" }, { "key": "fog", "name": "Niebla" }, { "key": "ice", "name": "Hielo" }, { "key": "wind", "name": "Viento" } ] },
+    { "key": "price", "name": "Precio distinto", "family": "price", "icon": "euro", "color": "#16A34A", "enabled": true, "ttlMin": 1440, "extendMin": 720, "priority": 0,
+      "voice": { "synonyms": [] }, "subtypes": [] }
+  ]
+}

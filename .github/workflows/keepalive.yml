@@ -1,0 +1,24 @@
+name: Keepalive
+
+# GitHub desactiva los workflows programados tras 60 días sin actividad en el repo.
+# Este job hace un commit trivial cada semana para que la ingesta cada 10 minutos no se detenga.
+on:
+  schedule:
+    - cron: '30 3 * * 1'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  keepalive:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: |
+          date -u +"%Y-%m-%dT%H:%M:%SZ" > .keepalive
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add .keepalive
+          git commit -m "chore: keepalive $(cat .keepalive)" || exit 0
+          git push

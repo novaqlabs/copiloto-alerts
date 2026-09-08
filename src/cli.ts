@@ -1,0 +1,181 @@
+/**
+ * CLI de copiloto-alerts.
+ *
+ *   node src/cli.ts run --out <dir> [--skip-supabase] [--radares <url|fichero>] [--incidencias <url|fichero>] [--prev-meta <url|fichero>]
+ *
+ * Variables de entorno (solo se leen en GitHub Actions; nunca hardcodeadas):
+ *   SUPABASE_URL, SUPABASE_SECRET_KEY
+ *
+ * NOTA para el controlador: las URL por defecto de radares e incidencias apuntan al NAP
+ * de la DGT (infocar.dgt.es) siguiendo el mismo patrón que `pipeline/src/ev.ts` (electrolineras)
+ * y los `schemaLocation` de los fixtures reales. No se han podido verificar contra la red en
+ * esta tarea (el gate solo usa fixtures locales) — comprobarlas contra https://nap.dgt.es/ antes
+ * de la primera ejecución real y ajustarlas con `--radares`/`--incidencias` si difieren.
+ */
+import { existsSync } from 'node:fs';
+import { readFile } from 'node:fs/promises';
+import { loadCatalogo, validateCatalogo } from './catalogo.ts';
+import { parseRadares, type Radar } from './radares.ts';
+import { parseIncidencias, type Incidencia } from './incidencias.ts';
+import { buildOutputs, writeOutputs, type SourceMeta, type SourcesMeta } from './outputs.ts';
+import { cleanupTraces, syncReportTypes, type SupabaseEnv } from './supabase.ts';
+
+const DEFAULT_RADARES_URL = 'https://infocar.dgt.es/datex2/v3/miterd/PredefinedLocationsPublication/radares.xml';
+const DEFAULT_INCIDENCIAS_URL = 'https://infocar.dgt.es/datex2/v3/dgt/SituationPublication/incidencias.xml';
+
+const USER_AGENT = 'copiloto-alerts/1.0 (+https://buscagasolina.com)';
+const FETCH_TIMEOUT_MS = 60_000;
+const RETRY_DELAY_MS = 10_000;
+
+function arg(name: string, def?: string): string | undefined {
+  const i = process.argv.indexOf(`--${name}`);
+  if (i === -1) return def;
+  const v = process.argv[i + 1];
+  return v && !v.startsWith('--') ? v : def;
+}
+const has = (name: string) => process.argv.includes(`--${name}`);
+const log = (m: string) => console.log(`[${new Date().toISOString().slice(11, 19)}] ${m}`);
+const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
+
+async function fetchOnce(url: string): Promise<string> {
+  const res = await fetch(url, { headers: { 'User-Agent': USER_AGENT }, signal: AbortSignal.timeout(FETCH_TIMEOUT_MS) });
+  if (!res.ok) throw new Error(`HTTP ${res.status}`);
+  return res.text();
+}
+
+/** Lee un fichero local si `source` existe en disco; si no, lo trata como URL con un reintento tras 10 s. */
+async function readSource(source: string): Promise<string> {
+  if (existsSync(source)) return readFile(source, 'utf8');
+  try {
+    return await fetchOnce(source);
+  } catch (e) {
+    log(`reintento tras fallo (${e instanceof Error ? e.message : e})`);
+    await sleep(RETRY_DELAY_MS);
+    return fetchOnce(source);
+  }
+}
+
+interface PrevMeta {
+  sources?: { radares?: { fetchedAt?: string }; incidencias?: { fetchedAt?: string } };
+}
+
+async function loadPrevMeta(source: string | undefined): Promise<PrevMeta | undefined> {
+  if (!source) return undefined;
+  try {
+    const text = existsSync(source) ? await readFile(source, 'utf8') : await fetchOnce(source);
+    return JSON.parse(text) as PrevMeta;
+  } catch (e) {
+    log(`prev-meta: no se pudo leer (${e instanceof Error ? e.message : e}), se ignora`);
+    return undefined;
+  }
+}
+
+async function loadSource(name: 'radares' | 'incidencias', source: string, now: Date, prevMeta: PrevMeta | undefined): Promise<{ text?: string; meta: SourceMeta }> {
+  try {
+    const text = await readSource(source);
+    return { text, meta: { fetchedAt: now.toISOString(), records: 0, ok: true } };
+  } catch (e) {
+    const error = e instanceof Error ? e.message : String(e);
+    log(`${name}: fallo (${error})`);
+    const fetchedAt = prevMeta?.sources?.[name]?.fetchedAt ?? now.toISOString();
+    return { meta: { fetchedAt, records: 0, ok: false, error } };
+  }
+}
+
+function supabaseEnvFromProcess(): SupabaseEnv | undefined {
+  const url = process.env.SUPABASE_URL;
+  const secretKey = process.env.SUPABASE_SECRET_KEY;
+  return url && secretKey ? { url, secretKey } : undefined;
+}
+
+async function run(): Promise<void> {
+  const outDir = arg('out', 'out')!;
+  const radaresSource = arg('radares', DEFAULT_RADARES_URL)!;
+  const incidenciasSource = arg('incidencias', DEFAULT_INCIDENCIAS_URL)!;
+  const prevMetaSource = arg('prev-meta');
+  const skipSupabase = has('skip-supabase');
+  const now = new Date();
+
+  log(`inicio: radares=${radaresSource} incidencias=${incidenciasSource} salida=${outDir}`);
+
+  const catalogo = loadCatalogo();
+  const catalogoCheck = validateCatalogo(catalogo);
+  if (!catalogoCheck.ok) {
+    console.error(`ERROR: catalogo.json invalido: ${catalogoCheck.problems.join('; ')}`);
+    process.exit(5);
+  }
+
+  const prevMeta = await loadPrevMeta(prevMetaSource);
+  const [radaresRes, incidenciasRes] = await Promise.all([
+    loadSource('radares', radaresSource, now, prevMeta),
+    loadSource('incidencias', incidenciasSource, now, prevMeta),
+  ]);
+
+  if (!radaresRes.text && !incidenciasRes.text) {
+    console.error('ERROR: fallaron las dos fuentes, no se publica nada.');
+    process.exit(4);
+  }
+
+  let radares: Radar[] = [];
+  if (radaresRes.text) {
+    radares = parseRadares(radaresRes.text);
+    radaresRes.meta.records = radares.length;
+    log(`radares: ${radares.length} registros`);
+  }
+
+  let incidencias: Incidencia[] = [];
+  if (incidenciasRes.text) {
+    const { items, discarded } = parseIncidencias(incidenciasRes.text, now);
+    incidencias = items;
+    incidenciasRes.meta.records = items.length;
+    const descartados = Object.values(discarded).reduce((a, b) => a + b, 0);
+    log(`incidencias: ${items.length} registros (${descartados} descartados)`);
+  }
+
+  const sources: SourcesMeta = { radares: radaresRes.meta, incidencias: incidenciasRes.meta };
+  const out = buildOutputs({ radares, incidencias, catalogo, now, sources });
+  const bytes = await writeOutputs(outDir, out);
+  log(`escritos ${out.size} ficheros (${(bytes / 1000).toFixed(0)} KB) en ${outDir}`);
+
+  if (skipSupabase) {
+    log('supabase: --skip-supabase, se omite sincronizacion');
+    return;
+  }
+  const env = supabaseEnvFromProcess();
+  if (!env) {
+    log('supabase: faltan SUPABASE_URL/SUPABASE_SECRET_KEY en el entorno, se omite sincronizacion');
+    return;
+  }
+
+  try {
+    const n = await syncReportTypes(catalogo, env);
+    log(`supabase: report_types sincronizados (${n})`);
+  } catch (e) {
+    log(`supabase: fallo sincronizando report_types: ${e instanceof Error ? e.message : e}`);
+  }
+
+  // La limpieza de trazas es cara (lista y borra por carpeta): se hace una vez al dia,
+  // en la ventana 04:00-04:09 UTC de las ejecuciones cada 10 minutos.
+  if (now.getUTCHours() === 4 && now.getUTCMinutes() < 10) {
+    try {
+      const n = await cleanupTraces(env, now);
+      log(`supabase: ${n} objetos de trazas antiguas eliminados`);
+    } catch (e) {
+      log(`supabase: fallo en la limpieza de trazas: ${e instanceof Error ? e.message : e}`);
+    }
+  }
+}
+
+async function main() {
+  const cmd = process.argv[2] ?? 'run';
+  if (cmd !== 'run') {
+    console.error(`comando desconocido: "${cmd}" (solo se admite "run")`);
+    process.exit(1);
+  }
+  await run();
+}
+
+main().catch((e) => {
+  console.error(e);
+  process.exit(1);
+});

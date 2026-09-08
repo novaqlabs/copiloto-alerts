@@ -33,7 +33,7 @@ describe('mapType', () => {
 
 describe('parseIncidencias', () => {
   const { items, discarded } = parseIncidencias(xml, NOW);
-  it('convierte la mayoria de los 912 registros y cuenta los descartados por tipo', () => {
+  it('convierte la mayoria de los 887 registros y cuenta los descartados por tipo', () => {
     expect(items.length).toBeGreaterThanOrEqual(850);
     expect(items.length + Object.values(discarded).reduce((a, b) => a + b, 0)).toBeGreaterThanOrEqual(880);
     expect(discarded['SpeedManagement']).toBeGreaterThanOrEqual(1);
