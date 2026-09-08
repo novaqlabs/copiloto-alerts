@@ -134,9 +134,6 @@ solo una, publica la otra y dejan constancia del fallo en `meta.json#sources`.
 `fixtures/radares.xml` y `fixtures/incidencias.xml` son descargas reales de los feeds del NAP,
 usadas para validar los parsers contra la estructura real de la DGT (no ejemplos simplificados).
 
-> Nota: las URL por defecto de `--radares`/`--incidencias` en `src/cli.ts` siguen el patrón de
-> host del NAP (`infocar.dgt.es`) usado por `repostar-data` para las electrolineras, pero no se
-> han verificado contra la red en el desarrollo de este pipeline (los fixtures son suficientes
-> para el desarrollo y los tests). Conviene comprobarlas contra el catálogo de
-> [nap.dgt.es](https://nap.dgt.es/) antes de la primera ejecución real del workflow y, si
-> difieren, corregirlas ahí o pasarlas por `--radares`/`--incidencias` en `alerts.yml`.
+> Nota: URL del NAP verificadas el 2026-09-08; el catálogo de datasets está en
+> https://nap.dgt.es/dataset/radares-fijos-dgt y
+> https://nap.dgt.es/dataset/incidencias-dgt-datex2-v3-7

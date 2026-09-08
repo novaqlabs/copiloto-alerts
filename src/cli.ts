@@ -6,11 +6,9 @@
  * Variables de entorno (solo se leen en GitHub Actions; nunca hardcodeadas):
  *   SUPABASE_URL, SUPABASE_SECRET_KEY
  *
- * NOTA para el controlador: las URL por defecto de radares e incidencias apuntan al NAP
- * de la DGT (infocar.dgt.es) siguiendo el mismo patrón que `pipeline/src/ev.ts` (electrolineras)
- * y los `schemaLocation` de los fixtures reales. No se han podido verificar contra la red en
- * esta tarea (el gate solo usa fixtures locales) — comprobarlas contra https://nap.dgt.es/ antes
- * de la primera ejecución real y ajustarlas con `--radares`/`--incidencias` si difieren.
+ * NOTA: URL del NAP verificadas el 2026-09-08; el catálogo de datasets está en
+ * https://nap.dgt.es/dataset/radares-fijos-dgt y
+ * https://nap.dgt.es/dataset/incidencias-dgt-datex2-v3-7
  */
 import { existsSync } from 'node:fs';
 import { readFile } from 'node:fs/promises';
@@ -20,8 +18,8 @@ import { parseIncidencias, type Incidencia } from './incidencias.ts';
 import { buildOutputs, writeOutputs, type SourceMeta, type SourcesMeta } from './outputs.ts';
 import { cleanupTraces, syncReportTypes, type SupabaseEnv } from './supabase.ts';
 
-const DEFAULT_RADARES_URL = 'https://infocar.dgt.es/datex2/v3/miterd/PredefinedLocationsPublication/radares.xml';
-const DEFAULT_INCIDENCIAS_URL = 'https://infocar.dgt.es/datex2/v3/dgt/SituationPublication/incidencias.xml';
+const DEFAULT_RADARES_URL = 'http://infocar.dgt.es/datex2/dgt/PredefinedLocationsPublication/radares/content.xml';
+const DEFAULT_INCIDENCIAS_URL = 'https://nap.dgt.es/datex2/v3/dgt/SituationPublication/datex2_v37.xml';
 
 const USER_AGENT = 'copiloto-alerts/1.0 (+https://buscagasolina.com)';
 const FETCH_TIMEOUT_MS = 60_000;
