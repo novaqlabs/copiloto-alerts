@@ -30,4 +30,13 @@ describe('buildOutputs', () => {
     expect([...out2.keys()].filter((k) => k.startsWith('radares/'))).toEqual([]);
     expect((out2.get('meta.json') as any).discarded.outOfCoverage).toBe(1);
   });
+  it('publica en meta.json los descartes de incidencias por tipo (M8)', () => {
+    const out2 = buildOutputs({ radares: [], incidencias: [], catalogo: loadCatalogo(), now: NOW,
+      sources: { radares: { fetchedAt: NOW.toISOString(), records: 0, ok: true }, incidencias: { fetchedAt: NOW.toISOString(), records: 0, ok: true } },
+      discardedIncidencias: { UnknownXsiType: 3, sin_coordenadas: 1 } });
+    expect((out2.get('meta.json') as any).discarded).toEqual({ outOfCoverage: 0, byType: { UnknownXsiType: 3, sin_coordenadas: 1 } });
+  });
+  it('discarded.byType es un objeto vacio cuando no se pasan descartes de incidencias', () => {
+    expect((out.get('meta.json') as any).discarded.byType).toEqual({});
+  });
 });

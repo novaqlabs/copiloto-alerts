@@ -25,7 +25,7 @@ export interface MetaJson {
   generatedAt: string;
   sources: SourcesMeta;
   cells: { radares: string[]; incidencias: string[] };
-  discarded: { outOfCoverage: number };
+  discarded: { outOfCoverage: number; byType: Record<string, number> };
 }
 
 export interface BuildOutputsInput {
@@ -34,6 +34,9 @@ export interface BuildOutputsInput {
   catalogo: Catalogo;
   now: Date;
   sources: SourcesMeta;
+  /** Descartes de `parseIncidencias` por motivo (incluye los xsi:type desconocidos, spec §4); se
+   * publican tal cual en `meta.json#discarded.byType`. Vacio si no se pasa. */
+  discardedIncidencias?: Record<string, number>;
 }
 
 export type OutputMap = Map<string, unknown>;
@@ -57,7 +60,7 @@ function groupByCell<T extends { id: string; lat: number; lng: number }>(items: 
 }
 
 export function buildOutputs(input: BuildOutputsInput): OutputMap {
-  const { radares, incidencias, catalogo, now, sources } = input;
+  const { radares, incidencias, catalogo, now, sources, discardedIncidencias } = input;
   const out: OutputMap = new Map();
 
   const radarGroups = groupByCell(radares);
@@ -74,7 +77,7 @@ export function buildOutputs(input: BuildOutputsInput): OutputMap {
       radares: [...radarGroups.byCell.keys()].sort(),
       incidencias: [...incGroups.byCell.keys()].sort(),
     },
-    discarded: { outOfCoverage: radarGroups.outOfCoverage + incGroups.outOfCoverage },
+    discarded: { outOfCoverage: radarGroups.outOfCoverage + incGroups.outOfCoverage, byType: discardedIncidencias ?? {} },
   };
   out.set('meta.json', meta);
   out.set('catalogo.json', catalogo);
