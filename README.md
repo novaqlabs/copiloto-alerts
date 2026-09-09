@@ -36,7 +36,7 @@ Publicados en la raíz del sitio de GitHub Pages:
 
 | Fichero | Contenido |
 | --- | --- |
-| `meta.json` | `{ contractVersion, generatedAt, sources, cells: { radares: string[], incidencias: string[] }, discarded: { outOfCoverage } }`. `cells.*` solo lista las celdas que tienen contenido; `sources.<radares\|incidencias>` es `{ fetchedAt, records, ok, error? }` por cada fuente de la última ejecución. |
+| `meta.json` | `{ contractVersion, generatedAt, sources, cells: { radares: string[], incidencias: string[] }, discarded: { outOfCoverage, byType } }`. `cells.*` solo lista las celdas que tienen contenido; `sources.<radares\|incidencias>` es `{ fetchedAt, records, ok, error? }` por cada fuente de la última ejecución; `discarded.byType` cuenta las incidencias descartadas por motivo (incluye los `xsi:type` desconocidos del DATEX II de la DGT, y motivos como `sin_coordenadas` o `terminada`). |
 | `catalogo.json` | Copia tal cual de `catalogo.json` (raíz de este repo): catálogo de tipos de alerta. |
 | `radares/<celda>.json` | Array de `Radar` (ver `src/radares.ts`) cuyo punto de inicio cae en esa celda de un grado (`${floor(lat)}_${floor(lng)}`), ordenado por `id`. Solo existen ficheros para celdas con contenido. |
 | `incidencias/<celda>.json` | Array de `Incidencia` (ver `src/incidencias.ts`), mismo criterio de celda y orden. |
@@ -75,12 +75,15 @@ Se ejecuta **solo en GitHub Actions**, nunca desde la app, con la clave secreta 
 repositorio (`SUPABASE_SECRET_KEY`, más `SUPABASE_URL` en el propio workflow):
 
 - `syncReportTypes(catalogo, env)`: hace *upsert* de los tipos no oficiales en `report_types` vía
-  PostgREST (`Prefer: resolution=merge-duplicates,return=minimal`, `?on_conflict=key`). Se llama
-  en cada ejecución salvo `--skip-supabase` o si faltan las variables de entorno.
-- `cleanupTraces(env, now)`: lista las carpetas `yyyy-mm-dd` del bucket `traces` y borra los
-  objetos de más de 30 días. Solo se ejecuta cuando la hora UTC actual cae entre las 04:00 y las
-  04:09 (una vez al día, en la ejecución de las 04:0x del cron de 10 minutos), para no listar y
-  borrar en cada pasada.
+  PostgREST (`Prefer: resolution=merge-duplicates,return=minimal`, `?on_conflict=key`).
+- `cleanupTraces(env, now, maxAgeDays?, pageSize?)`: lista las carpetas `yyyy-mm-dd` del bucket
+  `traces` (paginando por `offset`/`limit` hasta agotar el listado, igual que el listado de
+  objetos dentro de cada carpeta) y borra los objetos de más de 30 días.
+
+Ambas son caras o firman con la clave secreta con más frecuencia de la necesaria, así que
+`cli.ts` solo las llama cuando `isDailyMaintenanceWindow(now)` (`src/schedule.ts`) es cierto: la
+hora UTC actual cae entre las 04:00 y las 04:09 (una vez al día, en la ejecución de las 04:0x del
+cron de 10 minutos), salvo `--skip-supabase` o si faltan las variables de entorno.
 
 ## Cómo se ejecuta
 

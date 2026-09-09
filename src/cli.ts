@@ -17,6 +17,7 @@ import { parseRadares, type Radar } from './radares.ts';
 import { parseIncidencias, type Incidencia } from './incidencias.ts';
 import { buildOutputs, writeOutputs, type SourceMeta, type SourcesMeta } from './outputs.ts';
 import { cleanupTraces, syncReportTypes, type SupabaseEnv } from './supabase.ts';
+import { isDailyMaintenanceWindow } from './schedule.ts';
 
 const DEFAULT_RADARES_URL = 'http://infocar.dgt.es/datex2/dgt/PredefinedLocationsPublication/radares/content.xml';
 const DEFAULT_INCIDENCIAS_URL = 'https://nap.dgt.es/datex2/v3/dgt/SituationPublication/datex2_v37.xml';
@@ -122,16 +123,18 @@ async function run(): Promise<void> {
   }
 
   let incidencias: Incidencia[] = [];
+  let discardedIncidencias: Record<string, number> = {};
   if (incidenciasRes.text) {
     const { items, discarded } = parseIncidencias(incidenciasRes.text, now);
     incidencias = items;
+    discardedIncidencias = discarded;
     incidenciasRes.meta.records = items.length;
     const descartados = Object.values(discarded).reduce((a, b) => a + b, 0);
     log(`incidencias: ${items.length} registros (${descartados} descartados)`);
   }
 
   const sources: SourcesMeta = { radares: radaresRes.meta, incidencias: incidenciasRes.meta };
-  const out = buildOutputs({ radares, incidencias, catalogo, now, sources });
+  const out = buildOutputs({ radares, incidencias, catalogo, now, sources, discardedIncidencias });
   const bytes = await writeOutputs(outDir, out);
   log(`escritos ${out.size} ficheros (${(bytes / 1000).toFixed(0)} KB) en ${outDir}`);
 
@@ -145,22 +148,24 @@ async function run(): Promise<void> {
     return;
   }
 
-  try {
-    const n = await syncReportTypes(catalogo, env);
-    log(`supabase: report_types sincronizados (${n})`);
-  } catch (e) {
-    log(`supabase: fallo sincronizando report_types: ${e instanceof Error ? e.message : e}`);
-  }
-
-  // La limpieza de trazas es cara (lista y borra por carpeta): se hace una vez al dia,
-  // en la ventana 04:00-04:09 UTC de las ejecuciones cada 10 minutos.
-  if (now.getUTCHours() === 4 && now.getUTCMinutes() < 10) {
+  // report_types (barato, pero firma con la clave secreta) y la limpieza de trazas (cara: lista
+  // y borra por carpeta) solo hace falta sincronizarlos una vez al dia, no en cada ejecucion
+  // cada 10 minutos: se hacen ambos en la misma ventana 04:00-04:09 UTC.
+  if (isDailyMaintenanceWindow(now)) {
+    try {
+      const n = await syncReportTypes(catalogo, env);
+      log(`supabase: report_types sincronizados (${n})`);
+    } catch (e) {
+      log(`supabase: fallo sincronizando report_types: ${e instanceof Error ? e.message : e}`);
+    }
     try {
       const n = await cleanupTraces(env, now);
       log(`supabase: ${n} objetos de trazas antiguas eliminados`);
     } catch (e) {
       log(`supabase: fallo en la limpieza de trazas: ${e instanceof Error ? e.message : e}`);
     }
+  } else {
+    log('supabase: fuera de la ventana diaria (04:00-04:09 UTC), se omiten report_types y la limpieza de trazas');
   }
 }
 
