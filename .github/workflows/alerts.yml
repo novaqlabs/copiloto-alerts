@@ -17,7 +17,7 @@ jobs:
     env:
       SUPABASE_URL: https://swbhgotroyhpddsblixk.supabase.co
       SUPABASE_SECRET_KEY: ${{ secrets.SUPABASE_SECRET_KEY }}
-      PREV_META: https://dismagest.github.io/copiloto-alerts/meta.json
+      PREV_META: https://novaqlabs.github.io/copiloto-alerts/meta.json
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
