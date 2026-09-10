@@ -1,0 +1,1374 @@
+<?xml version="1.0" encoding="UTF-8"?><d2LogicalModel modelBaseVersion="1.0" xsi:schemaLocation="http://datex2.eu/schema/1_0/1_0 http://datex2.eu/schema/1_0/1_0/DATEXIISchema_1_0_1_0.xsd" xmlns="http://datex2.eu/schema/1_0/1_0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+  <exchange>
+    <supplierIdentification>
+      <country>es</country>
+      <nationalIdentifier>dgt</nationalIdentifier>
+    </supplierIdentification>
+  </exchange>
+  <payloadPublication lang="es" xsi:type="_0:MeasuredDataPublication" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xs="http://www.w3.org/2001/XMLSchema" xmlns:_0="http://datex2.eu/schema/1_0/1_0">
+    <_0:publicationTime>2026-09-10T22:26:23.908+02:00</_0:publicationTime>
+    <_0:publicationCreator>
+      <_0:country>es</_0:country>
+      <_0:nationalIdentifier>dgt_its</_0:nationalIdentifier>
+    </_0:publicationCreator>
+    <_0:measurementSiteTableReference>Inventario</_0:measurementSiteTableReference>
+    <_0:headerInformation>
+      <_0:areaOfInterest>national</_0:areaOfInterest>
+      <_0:confidentiality>noRestriction</_0:confidentiality>
+      <_0:informationUsage>broadcast</_0:informationUsage>
+      <_0:informationStatus>real</_0:informationStatus>
+    </_0:headerInformation>
+    <_0:siteMeasurements>
+      <_0:measurementSiteReference>GUID_DET_137934</_0:measurementSiteReference>
+      <_0:measurementTimeDefault>2026-09-10T22:25:00+02:00</_0:measurementTimeDefault>
+      <_0:measuredValue index="0">
+        <_0:measurementEquipmentTypeUsed>
+          <_0:value>Detector</_0:value>
+        </_0:measurementEquipmentTypeUsed>
+        <_0:basicDataValue xsi:type="_0:TrafficSpeed">
+          <_0:time>2026-09-10T22:25:00+02:00</_0:time>
+          <_0:affectedLocation xsi:type="_0:GroupOfLocationsByReference">
+            <_0:locationContainedInGroup xsi:type="_0:LocationByReference">
+              <_0:predefinedLocationReference>GUID_DET_137934</_0:predefinedLocationReference>
+            </_0:locationContainedInGroup>
+            <_0:predefinedLocationSetReference>GUID_Inventario_Detectores</_0:predefinedLocationSetReference>
+          </_0:affectedLocation>
+          <_0:averageVehicleSpeed>0.0</_0:averageVehicleSpeed>
+        </_0:basicDataValue>
+      </_0:measuredValue>
+      <_0:measuredValue index="1">
+        <_0:measurementEquipmentTypeUsed>
+          <_0:value>Detector</_0:value>
+        </_0:measurementEquipmentTypeUsed>
+        <_0:basicDataValue xsi:type="_0:TrafficHeadway">
+          <_0:time>2026-09-10T22:25:00+02:00</_0:time>
+          <_0:affectedLocation xsi:type="_0:GroupOfLocationsByReference">
+            <_0:locationContainedInGroup xsi:type="_0:LocationByReference">
+              <_0:predefinedLocationReference>GUID_DET_137934</_0:predefinedLocationReference>
+            </_0:locationContainedInGroup>
+            <_0:predefinedLocationSetReference>GUID_Inventario_Detectores</_0:predefinedLocationSetReference>
+          </_0:affectedLocation>
+          <_0:averageDistanceHeadway>0.0</_0:averageDistanceHeadway>
+        </_0:basicDataValue>
+      </_0:measuredValue>
+      <_0:measuredValue index="2">
+        <_0:measurementEquipmentTypeUsed>
+          <_0:value>Detector</_0:value>
+        </_0:measurementEquipmentTypeUsed>
+        <_0:basicDataValue xsi:type="_0:TrafficFlow">
+          <_0:time>2026-09-10T22:25:00+02:00</_0:time>
+          <_0:affectedLocation xsi:type="_0:GroupOfLocationsByReference">
+            <_0:locationContainedInGroup xsi:type="_0:LocationByReference">
+              <_0:predefinedLocationReference>GUID_DET_137934</_0:predefinedLocationReference>
+            </_0:locationContainedInGroup>
+            <_0:predefinedLocationSetReference>GUID_Inventario_Detectores</_0:predefinedLocationSetReference>
+          </_0:affectedLocation>
+          <_0:vehicleFlow>0</_0:vehicleFlow>
+        </_0:basicDataValue>
+      </_0:measuredValue>
+      <_0:measuredValue index="3">
+        <_0:measurementEquipmentTypeUsed>
+          <_0:value>Detector</_0:value>
+        </_0:measurementEquipmentTypeUsed>
+        <_0:basicDataValue xsi:type="_0:TrafficConcentration">
+          <_0:time>2026-09-10T22:25:00+02:00</_0:time>
+          <_0:affectedLocation xsi:type="_0:GroupOfLocationsByReference">
+            <_0:locationContainedInGroup xsi:type="_0:LocationByReference">
+              <_0:predefinedLocationReference>GUID_DET_137934</_0:predefinedLocationReference>
+            </_0:locationContainedInGroup>
+            <_0:predefinedLocationSetReference>GUID_Inventario_Detectores</_0:predefinedLocationSetReference>
+          </_0:affectedLocation>
+          <_0:occupancy>0.0</_0:occupancy>
+        </_0:basicDataValue>
+      </_0:measuredValue>
+    </_0:siteMeasurements>
+    <_0:siteMeasurements>
+      <_0:measurementSiteReference>GUID_DET_137933</_0:measurementSiteReference>
+      <_0:measurementTimeDefault>2026-09-10T22:25:00+02:00</_0:measurementTimeDefault>
+      <_0:measuredValue index="0">
+        <_0:measurementEquipmentTypeUsed>
+          <_0:value>Detector</_0:value>
+        </_0:measurementEquipmentTypeUsed>
+        <_0:basicDataValue xsi:type="_0:TrafficSpeed">
+          <_0:time>2026-09-10T22:25:00+02:00</_0:time>
+          <_0:affectedLocation xsi:type="_0:GroupOfLocationsByReference">
+            <_0:locationContainedInGroup xsi:type="_0:LocationByReference">
+              <_0:predefinedLocationReference>GUID_DET_137933</_0:predefinedLocationReference>
+            </_0:locationContainedInGroup>
+            <_0:predefinedLocationSetReference>GUID_Inventario_Detectores</_0:predefinedLocationSetReference>
+          </_0:affectedLocation>
+          <_0:averageVehicleSpeed>0.0</_0:averageVehicleSpeed>
+        </_0:basicDataValue>
+      </_0:measuredValue>
+      <_0:measuredValue index="1">
+        <_0:measurementEquipmentTypeUsed>
+          <_0:value>Detector</_0:value>
+        </_0:measurementEquipmentTypeUsed>
+        <_0:basicDataValue xsi:type="_0:TrafficHeadway">
+          <_0:time>2026-09-10T22:25:00+02:00</_0:time>
+          <_0:affectedLocation xsi:type="_0:GroupOfLocationsByReference">
+            <_0:locationContainedInGroup xsi:type="_0:LocationByReference">
+              <_0:predefinedLocationReference>GUID_DET_137933</_0:predefinedLocationReference>
+            </_0:locationContainedInGroup>
+            <_0:predefinedLocationSetReference>GUID_Inventario_Detectores</_0:predefinedLocationSetReference>
+          </_0:affectedLocation>
+          <_0:averageDistanceHeadway>0.0</_0:averageDistanceHeadway>
+        </_0:basicDataValue>
+      </_0:measuredValue>
+      <_0:measuredValue index="2">
+        <_0:measurementEquipmentTypeUsed>
+          <_0:value>Detector</_0:value>
+        </_0:measurementEquipmentTypeUsed>
+        <_0:basicDataValue xsi:type="_0:TrafficFlow">
+          <_0:time>2026-09-10T22:25:00+02:00</_0:time>
+          <_0:affectedLocation xsi:type="_0:GroupOfLocationsByReference">
+            <_0:locationContainedInGroup xsi:type="_0:LocationByReference">
+              <_0:predefinedLocationReference>GUID_DET_137933</_0:predefinedLocationReference>
+            </_0:locationContainedInGroup>
+            <_0:predefinedLocationSetReference>GUID_Inventario_Detectores</_0:predefinedLocationSetReference>
+          </_0:affectedLocation>
+          <_0:vehicleFlow>0</_0:vehicleFlow>
+        </_0:basicDataValue>
+      </_0:measuredValue>
+      <_0:measuredValue index="3">
+        <_0:measurementEquipmentTypeUsed>
+          <_0:value>Detector</_0:value>
+        </_0:measurementEquipmentTypeUsed>
+        <_0:basicDataValue xsi:type="_0:TrafficConcentration">
+          <_0:time>2026-09-10T22:25:00+02:00</_0:time>
+          <_0:affectedLocation xsi:type="_0:GroupOfLocationsByReference">
+            <_0:locationContainedInGroup xsi:type="_0:LocationByReference">
+              <_0:predefinedLocationReference>GUID_DET_137933</_0:predefinedLocationReference>
+            </_0:locationContainedInGroup>
+            <_0:predefinedLocationSetReference>GUID_Inventario_Detectores</_0:predefinedLocationSetReference>
+          </_0:affectedLocation>
+          <_0:occupancy>0.0</_0:occupancy>
+        </_0:basicDataValue>
+      </_0:measuredValue>
+    </_0:siteMeasurements>
+    <_0:siteMeasurements>
+      <_0:measurementSiteReference>GUID_DET_137931</_0:measurementSiteReference>
+      <_0:measurementTimeDefault>2026-09-10T22:25:00+02:00</_0:measurementTimeDefault>
+      <_0:measuredValue index="0">
+        <_0:measurementEquipmentTypeUsed>
+          <_0:value>Detector</_0:value>
+        </_0:measurementEquipmentTypeUsed>
+        <_0:basicDataValue xsi:type="_0:TrafficSpeed">
+          <_0:time>2026-09-10T22:25:00+02:00</_0:time>
+          <_0:affectedLocation xsi:type="_0:GroupOfLocationsByReference">
+            <_0:locationContainedInGroup xsi:type="_0:LocationByReference">
+              <_0:predefinedLocationReference>GUID_DET_137931</_0:predefinedLocationReference>
+            </_0:locationContainedInGroup>
+            <_0:predefinedLocationSetReference>GUID_Inventario_Detectores</_0:predefinedLocationSetReference>
+          </_0:affectedLocation>
+          <_0:averageVehicleSpeed>0.0</_0:averageVehicleSpeed>
+        </_0:basicDataValue>
+      </_0:measuredValue>
+      <_0:measuredValue index="1">
+        <_0:measurementEquipmentTypeUsed>
+          <_0:value>Detector</_0:value>
+        </_0:measurementEquipmentTypeUsed>
+        <_0:basicDataValue xsi:type="_0:TrafficHeadway">
+          <_0:time>2026-09-10T22:25:00+02:00</_0:time>
+          <_0:affectedLocation xsi:type="_0:GroupOfLocationsByReference">
+            <_0:locationContainedInGroup xsi:type="_0:LocationByReference">
+              <_0:predefinedLocationReference>GUID_DET_137931</_0:predefinedLocationReference>
+            </_0:locationContainedInGroup>
+            <_0:predefinedLocationSetReference>GUID_Inventario_Detectores</_0:predefinedLocationSetReference>
+          </_0:affectedLocation>
+          <_0:averageDistanceHeadway>0.0</_0:averageDistanceHeadway>
+        </_0:basicDataValue>
+      </_0:measuredValue>
+      <_0:measuredValue index="2">
+        <_0:measurementEquipmentTypeUsed>
+          <_0:value>Detector</_0:value>
+        </_0:measurementEquipmentTypeUsed>
+        <_0:basicDataValue xsi:type="_0:TrafficFlow">
+          <_0:time>2026-09-10T22:25:00+02:00</_0:time>
+          <_0:affectedLocation xsi:type="_0:GroupOfLocationsByReference">
+            <_0:locationContainedInGroup xsi:type="_0:LocationByReference">
+              <_0:predefinedLocationReference>GUID_DET_137931</_0:predefinedLocationReference>
+            </_0:locationContainedInGroup>
+            <_0:predefinedLocationSetReference>GUID_Inventario_Detectores</_0:predefinedLocationSetReference>
+          </_0:affectedLocation>
+          <_0:vehicleFlow>0</_0:vehicleFlow>
+        </_0:basicDataValue>
+      </_0:measuredValue>
+      <_0:measuredValue index="3">
+        <_0:measurementEquipmentTypeUsed>
+          <_0:value>Detector</_0:value>
+        </_0:measurementEquipmentTypeUsed>
+        <_0:basicDataValue xsi:type="_0:TrafficConcentration">
+          <_0:time>2026-09-10T22:25:00+02:00</_0:time>
+          <_0:affectedLocation xsi:type="_0:GroupOfLocationsByReference">
+            <_0:locationContainedInGroup xsi:type="_0:LocationByReference">
+              <_0:predefinedLocationReference>GUID_DET_137931</_0:predefinedLocationReference>
+            </_0:locationContainedInGroup>
+            <_0:predefinedLocationSetReference>GUID_Inventario_Detectores</_0:predefinedLocationSetReference>
+          </_0:affectedLocation>
+          <_0:occupancy>0.0</_0:occupancy>
+        </_0:basicDataValue>
+      </_0:measuredValue>
+    </_0:siteMeasurements>
+    <_0:siteMeasurements>
+      <_0:measurementSiteReference>GUID_DET_138003</_0:measurementSiteReference>
+      <_0:measurementTimeDefault>2026-09-10T22:25:00+02:00</_0:measurementTimeDefault>
+      <_0:measuredValue index="0">
+        <_0:measurementEquipmentTypeUsed>
+          <_0:value>Detector</_0:value>
+        </_0:measurementEquipmentTypeUsed>
+        <_0:basicDataValue xsi:type="_0:TrafficSpeed">
+          <_0:time>2026-09-10T22:25:00+02:00</_0:time>
+          <_0:affectedLocation xsi:type="_0:GroupOfLocationsByReference">
+            <_0:locationContainedInGroup xsi:type="_0:LocationByReference">
+              <_0:predefinedLocationReference>GUID_DET_138003</_0:predefinedLocationReference>
+            </_0:locationContainedInGroup>
+            <_0:predefinedLocationSetReference>GUID_Inventario_Detectores</_0:predefinedLocationSetReference>
+          </_0:affectedLocation>
+          <_0:averageVehicleSpeed>102.0</_0:averageVehicleSpeed>
+        </_0:basicDataValue>
+      </_0:measuredValue>
+      <_0:measuredValue index="1">
+        <_0:measurementEquipmentTypeUsed>
+          <_0:value>Detector</_0:value>
+        </_0:measurementEquipmentTypeUsed>
+        <_0:basicDataValue xsi:type="_0:TrafficHeadway">
+          <_0:time>2026-09-10T22:25:00+02:00</_0:time>
+          <_0:affectedLocation xsi:type="_0:GroupOfLocationsByReference">
+            <_0:locationContainedInGroup xsi:type="_0:LocationByReference">
+              <_0:predefinedLocationReference>GUID_DET_138003</_0:predefinedLocationReference>
+            </_0:locationContainedInGroup>
+            <_0:predefinedLocationSetReference>GUID_Inventario_Detectores</_0:predefinedLocationSetReference>
+          </_0:affectedLocation>
+          <_0:averageDistanceHeadway>128.0</_0:averageDistanceHeadway>
+        </_0:basicDataValue>
+      </_0:measuredValue>
+      <_0:measuredValue index="2">
+        <_0:measurementEquipmentTypeUsed>
+          <_0:value>Detector</_0:value>
+        </_0:measurementEquipmentTypeUsed>
+        <_0:basicDataValue xsi:type="_0:TrafficFlow">
+          <_0:time>2026-09-10T22:25:00+02:00</_0:time>
+          <_0:affectedLocation xsi:type="_0:GroupOfLocationsByReference">
+            <_0:locationContainedInGroup xsi:type="_0:LocationByReference">
+              <_0:predefinedLocationReference>GUID_DET_138003</_0:predefinedLocationReference>
+            </_0:locationContainedInGroup>
+            <_0:predefinedLocationSetReference>GUID_Inventario_Detectores</_0:predefinedLocationSetReference>
+          </_0:affectedLocation>
+          <_0:vehicleFlow>1020</_0:vehicleFlow>
+        </_0:basicDataValue>
+      </_0:measuredValue>
+      <_0:measuredValue index="3">
+        <_0:measurementEquipmentTypeUsed>
+          <_0:value>Detector</_0:value>
+        </_0:measurementEquipmentTypeUsed>
+        <_0:basicDataValue xsi:type="_0:TrafficConcentration">
+          <_0:time>2026-09-10T22:25:00+02:00</_0:time>
+          <_0:affectedLocation xsi:type="_0:GroupOfLocationsByReference">
+            <_0:locationContainedInGroup xsi:type="_0:LocationByReference">
+              <_0:predefinedLocationReference>GUID_DET_138003</_0:predefinedLocationReference>
+            </_0:locationContainedInGroup>
+            <_0:predefinedLocationSetReference>GUID_Inventario_Detectores</_0:predefinedLocationSetReference>
+          </_0:affectedLocation>
+          <_0:occupancy>2.0</_0:occupancy>
+        </_0:basicDataValue>
+      </_0:measuredValue>
+    </_0:siteMeasurements>
+    <_0:siteMeasurements>
+      <_0:measurementSiteReference>GUID_DET_138002</_0:measurementSiteReference>
+      <_0:measurementTimeDefault>2026-09-10T22:25:00+02:00</_0:measurementTimeDefault>
+      <_0:measuredValue index="0">
+        <_0:measurementEquipmentTypeUsed>
+          <_0:value>Detector</_0:value>
+        </_0:measurementEquipmentTypeUsed>
+        <_0:basicDataValue xsi:type="_0:TrafficSpeed">
+          <_0:time>2026-09-10T22:25:00+02:00</_0:time>
+          <_0:affectedLocation xsi:type="_0:GroupOfLocationsByReference">
+            <_0:locationContainedInGroup xsi:type="_0:LocationByReference">
+              <_0:predefinedLocationReference>GUID_DET_138002</_0:predefinedLocationReference>
+            </_0:locationContainedInGroup>
+            <_0:predefinedLocationSetReference>GUID_Inventario_Detectores</_0:predefinedLocationSetReference>
+          </_0:affectedLocation>
+          <_0:averageVehicleSpeed>117.0</_0:averageVehicleSpeed>
+        </_0:basicDataValue>
+      </_0:measuredValue>
+      <_0:measuredValue index="1">
+        <_0:measurementEquipmentTypeUsed>
+          <_0:value>Detector</_0:value>
+        </_0:measurementEquipmentTypeUsed>
+        <_0:basicDataValue xsi:type="_0:TrafficHeadway">
+          <_0:time>2026-09-10T22:25:00+02:00</_0:time>
+          <_0:affectedLocation xsi:type="_0:GroupOfLocationsByReference">
+            <_0:locationContainedInGroup xsi:type="_0:LocationByReference">
+              <_0:predefinedLocationReference>GUID_DET_138002</_0:predefinedLocationReference>
+            </_0:locationContainedInGroup>
+            <_0:predefinedLocationSetReference>GUID_Inventario_Detectores</_0:predefinedLocationSetReference>
+          </_0:affectedLocation>
+          <_0:averageDistanceHeadway>88.0</_0:averageDistanceHeadway>
+        </_0:basicDataValue>
+      </_0:measuredValue>
+      <_0:measuredValue index="2">
+        <_0:measurementEquipmentTypeUsed>
+          <_0:value>Detector</_0:value>
+        </_0:measurementEquipmentTypeUsed>
+        <_0:basicDataValue xsi:type="_0:TrafficFlow">
+          <_0:time>2026-09-10T22:25:00+02:00</_0:time>
+          <_0:affectedLocation xsi:type="_0:GroupOfLocationsByReference">
+            <_0:locationContainedInGroup xsi:type="_0:LocationByReference">
+              <_0:predefinedLocationReference>GUID_DET_138002</_0:predefinedLocationReference>
+            </_0:locationContainedInGroup>
+            <_0:predefinedLocationSetReference>GUID_Inventario_Detectores</_0:predefinedLocationSetReference>
+          </_0:affectedLocation>
+          <_0:vehicleFlow>960</_0:vehicleFlow>
+        </_0:basicDataValue>
+      </_0:measuredValue>
+      <_0:measuredValue index="3">
+        <_0:measurementEquipmentTypeUsed>
+          <_0:value>Detector</_0:value>
+        </_0:measurementEquipmentTypeUsed>
+        <_0:basicDataValue xsi:type="_0:TrafficConcentration">
+          <_0:time>2026-09-10T22:25:00+02:00</_0:time>
+          <_0:affectedLocation xsi:type="_0:GroupOfLocationsByReference">
+            <_0:locationContainedInGroup xsi:type="_0:LocationByReference">
+              <_0:predefinedLocationReference>GUID_DET_138002</_0:predefinedLocationReference>
+            </_0:locationContainedInGroup>
+            <_0:predefinedLocationSetReference>GUID_Inventario_Detectores</_0:predefinedLocationSetReference>
+          </_0:affectedLocation>
+          <_0:occupancy>7.0</_0:occupancy>
+        </_0:basicDataValue>
+      </_0:measuredValue>
+    </_0:siteMeasurements>
+    <_0:siteMeasurements>
+      <_0:measurementSiteReference>GUID_DET_138016</_0:measurementSiteReference>
+      <_0:measurementTimeDefault>2026-09-10T22:25:00+02:00</_0:measurementTimeDefault>
+      <_0:measuredValue index="0">
+        <_0:measurementEquipmentTypeUsed>
+          <_0:value>Detector</_0:value>
+        </_0:measurementEquipmentTypeUsed>
+        <_0:basicDataValue xsi:type="_0:TrafficSpeed">
+          <_0:time>2026-09-10T22:25:00+02:00</_0:time>
+          <_0:affectedLocation xsi:type="_0:GroupOfLocationsByReference">
+            <_0:locationContainedInGroup xsi:type="_0:LocationByReference">
+              <_0:predefinedLocationReference>GUID_DET_138016</_0:predefinedLocationReference>
+            </_0:locationContainedInGroup>
+            <_0:predefinedLocationSetReference>GUID_Inventario_Detectores</_0:predefinedLocationSetReference>
+          </_0:affectedLocation>
+          <_0:averageVehicleSpeed>59.0</_0:averageVehicleSpeed>
+        </_0:basicDataValue>
+      </_0:measuredValue>
+      <_0:measuredValue index="1">
+        <_0:measurementEquipmentTypeUsed>
+          <_0:value>Detector</_0:value>
+        </_0:measurementEquipmentTypeUsed>
+        <_0:basicDataValue xsi:type="_0:TrafficHeadway">
+          <_0:time>2026-09-10T22:25:00+02:00</_0:time>
+          <_0:affectedLocation xsi:type="_0:GroupOfLocationsByReference">
+            <_0:locationContainedInGroup xsi:type="_0:LocationByReference">
+              <_0:predefinedLocationReference>GUID_DET_138016</_0:predefinedLocationReference>
+            </_0:locationContainedInGroup>
+            <_0:predefinedLocationSetReference>GUID_Inventario_Detectores</_0:predefinedLocationSetReference>
+          </_0:affectedLocation>
+          <_0:averageDistanceHeadway>236.0</_0:averageDistanceHeadway>
+        </_0:basicDataValue>
+      </_0:measuredValue>
+      <_0:measuredValue index="2">
+        <_0:measurementEquipmentTypeUsed>
+          <_0:value>Detector</_0:value>
+        </_0:measurementEquipmentTypeUsed>
+        <_0:basicDataValue xsi:type="_0:TrafficFlow">
+          <_0:time>2026-09-10T22:25:00+02:00</_0:time>
+          <_0:affectedLocation xsi:type="_0:GroupOfLocationsByReference">
+            <_0:locationContainedInGroup xsi:type="_0:LocationByReference">
+              <_0:predefinedLocationReference>GUID_DET_138016</_0:predefinedLocationReference>
+            </_0:locationContainedInGroup>
+            <_0:predefinedLocationSetReference>GUID_Inventario_Detectores</_0:predefinedLocationSetReference>
+          </_0:affectedLocation>
+          <_0:vehicleFlow>180</_0:vehicleFlow>
+        </_0:basicDataValue>
+      </_0:measuredValue>
+      <_0:measuredValue index="3">
+        <_0:measurementEquipmentTypeUsed>
+          <_0:value>Detector</_0:value>
+        </_0:measurementEquipmentTypeUsed>
+        <_0:basicDataValue xsi:type="_0:TrafficConcentration">
+          <_0:time>2026-09-10T22:25:00+02:00</_0:time>
+          <_0:affectedLocation xsi:type="_0:GroupOfLocationsByReference">
+            <_0:locationContainedInGroup xsi:type="_0:LocationByReference">
+              <_0:predefinedLocationReference>GUID_DET_138016</_0:predefinedLocationReference>
+            </_0:locationContainedInGroup>
+            <_0:predefinedLocationSetReference>GUID_Inventario_Detectores</_0:predefinedLocationSetReference>
+          </_0:affectedLocation>
+          <_0:occupancy>2.0</_0:occupancy>
+        </_0:basicDataValue>
+      </_0:measuredValue>
+    </_0:siteMeasurements>
+    <_0:siteMeasurements>
+      <_0:measurementSiteReference>GUID_DET_138019</_0:measurementSiteReference>
+      <_0:measurementTimeDefault>2026-09-10T22:25:00+02:00</_0:measurementTimeDefault>
+      <_0:measuredValue index="0">
+        <_0:measurementEquipmentTypeUsed>
+          <_0:value>Detector</_0:value>
+        </_0:measurementEquipmentTypeUsed>
+        <_0:basicDataValue xsi:type="_0:TrafficSpeed">
+          <_0:time>2026-09-10T22:25:00+02:00</_0:time>
+          <_0:affectedLocation xsi:type="_0:GroupOfLocationsByReference">
+            <_0:locationContainedInGroup xsi:type="_0:LocationByReference">
+              <_0:predefinedLocationReference>GUID_DET_138019</_0:predefinedLocationReference>
+            </_0:locationContainedInGroup>
+            <_0:predefinedLocationSetReference>GUID_Inventario_Detectores</_0:predefinedLocationSetReference>
+          </_0:affectedLocation>
+          <_0:averageVehicleSpeed>121.0</_0:averageVehicleSpeed>
+        </_0:basicDataValue>
+      </_0:measuredValue>
+      <_0:measuredValue index="1">
+        <_0:measurementEquipmentTypeUsed>
+          <_0:value>Detector</_0:value>
+        </_0:measurementEquipmentTypeUsed>
+        <_0:basicDataValue xsi:type="_0:TrafficHeadway">
+          <_0:time>2026-09-10T22:25:00+02:00</_0:time>
+          <_0:affectedLocation xsi:type="_0:GroupOfLocationsByReference">
+            <_0:locationContainedInGroup xsi:type="_0:LocationByReference">
+              <_0:predefinedLocationReference>GUID_DET_138019</_0:predefinedLocationReference>
+            </_0:locationContainedInGroup>
+            <_0:predefinedLocationSetReference>GUID_Inventario_Detectores</_0:predefinedLocationSetReference>
+          </_0:affectedLocation>
+          <_0:averageDistanceHeadway>167.0</_0:averageDistanceHeadway>
+        </_0:basicDataValue>
+      </_0:measuredValue>
+      <_0:measuredValue index="2">
+        <_0:measurementEquipmentTypeUsed>
+          <_0:value>Detector</_0:value>
+        </_0:measurementEquipmentTypeUsed>
+        <_0:basicDataValue xsi:type="_0:TrafficFlow">
+          <_0:time>2026-09-10T22:25:00+02:00</_0:time>
+          <_0:affectedLocation xsi:type="_0:GroupOfLocationsByReference">
+            <_0:locationContainedInGroup xsi:type="_0:LocationByReference">
+              <_0:predefinedLocationReference>GUID_DET_138019</_0:predefinedLocationReference>
+            </_0:locationContainedInGroup>
+            <_0:predefinedLocationSetReference>GUID_Inventario_Detectores</_0:predefinedLocationSetReference>
+          </_0:affectedLocation>
+          <_0:vehicleFlow>360</_0:vehicleFlow>
+        </_0:basicDataValue>
+      </_0:measuredValue>
+      <_0:measuredValue index="3">
+        <_0:measurementEquipmentTypeUsed>
+          <_0:value>Detector</_0:value>
+        </_0:measurementEquipmentTypeUsed>
+        <_0:basicDataValue xsi:type="_0:TrafficConcentration">
+          <_0:time>2026-09-10T22:25:00+02:00</_0:time>
+          <_0:affectedLocation xsi:type="_0:GroupOfLocationsByReference">
+            <_0:locationContainedInGroup xsi:type="_0:LocationByReference">
+              <_0:predefinedLocationReference>GUID_DET_138019</_0:predefinedLocationReference>
+            </_0:locationContainedInGroup>
+            <_0:predefinedLocationSetReference>GUID_Inventario_Detectores</_0:predefinedLocationSetReference>
+          </_0:affectedLocation>
+          <_0:occupancy>1.0</_0:occupancy>
+        </_0:basicDataValue>
+      </_0:measuredValue>
+    </_0:siteMeasurements>
+    <_0:siteMeasurements>
+      <_0:measurementSiteReference>GUID_DET_138018</_0:measurementSiteReference>
+      <_0:measurementTimeDefault>2026-09-10T22:25:00+02:00</_0:measurementTimeDefault>
+      <_0:measuredValue index="0">
+        <_0:measurementEquipmentTypeUsed>
+          <_0:value>Detector</_0:value>
+        </_0:measurementEquipmentTypeUsed>
+        <_0:basicDataValue xsi:type="_0:TrafficSpeed">
+          <_0:time>2026-09-10T22:25:00+02:00</_0:time>
+          <_0:affectedLocation xsi:type="_0:GroupOfLocationsByReference">
+            <_0:locationContainedInGroup xsi:type="_0:LocationByReference">
+              <_0:predefinedLocationReference>GUID_DET_138018</_0:predefinedLocationReference>
+            </_0:locationContainedInGroup>
+            <_0:predefinedLocationSetReference>GUID_Inventario_Detectores</_0:predefinedLocationSetReference>
+          </_0:affectedLocation>
+          <_0:averageVehicleSpeed>102.0</_0:averageVehicleSpeed>
+        </_0:basicDataValue>
+      </_0:measuredValue>
+      <_0:measuredValue index="1">
+        <_0:measurementEquipmentTypeUsed>
+          <_0:value>Detector</_0:value>
+        </_0:measurementEquipmentTypeUsed>
+        <_0:basicDataValue xsi:type="_0:TrafficHeadway">
+          <_0:time>2026-09-10T22:25:00+02:00</_0:time>
+          <_0:affectedLocation xsi:type="_0:GroupOfLocationsByReference">
+            <_0:locationContainedInGroup xsi:type="_0:LocationByReference">
+              <_0:predefinedLocationReference>GUID_DET_138018</_0:predefinedLocationReference>
+            </_0:locationContainedInGroup>
+            <_0:predefinedLocationSetReference>GUID_Inventario_Detectores</_0:predefinedLocationSetReference>
+          </_0:affectedLocation>
+          <_0:averageDistanceHeadway>142.0</_0:averageDistanceHeadway>
+        </_0:basicDataValue>
+      </_0:measuredValue>
+      <_0:measuredValue index="2">
+        <_0:measurementEquipmentTypeUsed>
+          <_0:value>Detector</_0:value>
+        </_0:measurementEquipmentTypeUsed>
+        <_0:basicDataValue xsi:type="_0:TrafficFlow">
+          <_0:time>2026-09-10T22:25:00+02:00</_0:time>
+          <_0:affectedLocation xsi:type="_0:GroupOfLocationsByReference">
+            <_0:locationContainedInGroup xsi:type="_0:LocationByReference">
+              <_0:predefinedLocationReference>GUID_DET_138018</_0:predefinedLocationReference>
+            </_0:locationContainedInGroup>
+            <_0:predefinedLocationSetReference>GUID_Inventario_Detectores</_0:predefinedLocationSetReference>
+          </_0:affectedLocation>
+          <_0:vehicleFlow>720</_0:vehicleFlow>
+        </_0:basicDataValue>
+      </_0:measuredValue>
+      <_0:measuredValue index="3">
+        <_0:measurementEquipmentTypeUsed>
+          <_0:value>Detector</_0:value>
+        </_0:measurementEquipmentTypeUsed>
+        <_0:basicDataValue xsi:type="_0:TrafficConcentration">
+          <_0:time>2026-09-10T22:25:00+02:00</_0:time>
+          <_0:affectedLocation xsi:type="_0:GroupOfLocationsByReference">
+            <_0:locationContainedInGroup xsi:type="_0:LocationByReference">
+              <_0:predefinedLocationReference>GUID_DET_138018</_0:predefinedLocationReference>
+            </_0:locationContainedInGroup>
+            <_0:predefinedLocationSetReference>GUID_Inventario_Detectores</_0:predefinedLocationSetReference>
+          </_0:affectedLocation>
+          <_0:occupancy>4.0</_0:occupancy>
+        </_0:basicDataValue>
+      </_0:measuredValue>
+    </_0:siteMeasurements>
+    <_0:siteMeasurements>
+      <_0:measurementSiteReference>GUID_DET_138017</_0:measurementSiteReference>
+      <_0:measurementTimeDefault>2026-09-10T22:25:00+02:00</_0:measurementTimeDefault>
+      <_0:measuredValue index="0">
+        <_0:measurementEquipmentTypeUsed>
+          <_0:value>Detector</_0:value>
+        </_0:measurementEquipmentTypeUsed>
+        <_0:basicDataValue xsi:type="_0:TrafficSpeed">
+          <_0:time>2026-09-10T22:25:00+02:00</_0:time>
+          <_0:affectedLocation xsi:type="_0:GroupOfLocationsByReference">
+            <_0:locationContainedInGroup xsi:type="_0:LocationByReference">
+              <_0:predefinedLocationReference>GUID_DET_138017</_0:predefinedLocationReference>
+            </_0:locationContainedInGroup>
+            <_0:predefinedLocationSetReference>GUID_Inventario_Detectores</_0:predefinedLocationSetReference>
+          </_0:affectedLocation>
+          <_0:averageVehicleSpeed>91.0</_0:averageVehicleSpeed>
+        </_0:basicDataValue>
+      </_0:measuredValue>
+      <_0:measuredValue index="1">
+        <_0:measurementEquipmentTypeUsed>
+          <_0:value>Detector</_0:value>
+        </_0:measurementEquipmentTypeUsed>
+        <_0:basicDataValue xsi:type="_0:TrafficHeadway">
+          <_0:time>2026-09-10T22:25:00+02:00</_0:time>
+          <_0:affectedLocation xsi:type="_0:GroupOfLocationsByReference">
+            <_0:locationContainedInGroup xsi:type="_0:LocationByReference">
+              <_0:predefinedLocationReference>GUID_DET_138017</_0:predefinedLocationReference>
+            </_0:locationContainedInGroup>
+            <_0:predefinedLocationSetReference>GUID_Inventario_Detectores</_0:predefinedLocationSetReference>
+          </_0:affectedLocation>
+          <_0:averageDistanceHeadway>93.0</_0:averageDistanceHeadway>
+        </_0:basicDataValue>
+      </_0:measuredValue>
+      <_0:measuredValue index="2">
+        <_0:measurementEquipmentTypeUsed>
+          <_0:value>Detector</_0:value>
+        </_0:measurementEquipmentTypeUsed>
+        <_0:basicDataValue xsi:type="_0:TrafficFlow">
+          <_0:time>2026-09-10T22:25:00+02:00</_0:time>
+          <_0:affectedLocation xsi:type="_0:GroupOfLocationsByReference">
+            <_0:locationContainedInGroup xsi:type="_0:LocationByReference">
+              <_0:predefinedLocationReference>GUID_DET_138017</_0:predefinedLocationReference>
+            </_0:locationContainedInGroup>
+            <_0:predefinedLocationSetReference>GUID_Inventario_Detectores</_0:predefinedLocationSetReference>
+          </_0:affectedLocation>
+          <_0:vehicleFlow>720</_0:vehicleFlow>
+        </_0:basicDataValue>
+      </_0:measuredValue>
+      <_0:measuredValue index="3">
+        <_0:measurementEquipmentTypeUsed>
+          <_0:value>Detector</_0:value>
+        </_0:measurementEquipmentTypeUsed>
+        <_0:basicDataValue xsi:type="_0:TrafficConcentration">
+          <_0:time>2026-09-10T22:25:00+02:00</_0:time>
+          <_0:affectedLocation xsi:type="_0:GroupOfLocationsByReference">
+            <_0:locationContainedInGroup xsi:type="_0:LocationByReference">
+              <_0:predefinedLocationReference>GUID_DET_138017</_0:predefinedLocationReference>
+            </_0:locationContainedInGroup>
+            <_0:predefinedLocationSetReference>GUID_Inventario_Detectores</_0:predefinedLocationSetReference>
+          </_0:affectedLocation>
+          <_0:occupancy>5.0</_0:occupancy>
+        </_0:basicDataValue>
+      </_0:measuredValue>
+    </_0:siteMeasurements>
+    <_0:siteMeasurements>
+      <_0:measurementSiteReference>GUID_DET_138083</_0:measurementSiteReference>
+      <_0:measurementTimeDefault>2026-09-10T22:23:00+02:00</_0:measurementTimeDefault>
+      <_0:measuredValue index="0">
+        <_0:measurementEquipmentTypeUsed>
+          <_0:value>Detector</_0:value>
+        </_0:measurementEquipmentTypeUsed>
+        <_0:basicDataValue xsi:type="_0:TrafficSpeed">
+          <_0:time>2026-09-10T22:23:00+02:00</_0:time>
+          <_0:affectedLocation xsi:type="_0:GroupOfLocationsByReference">
+            <_0:locationContainedInGroup xsi:type="_0:LocationByReference">
+              <_0:predefinedLocationReference>GUID_DET_138083</_0:predefinedLocationReference>
+            </_0:locationContainedInGroup>
+            <_0:predefinedLocationSetReference>GUID_Inventario_Detectores</_0:predefinedLocationSetReference>
+          </_0:affectedLocation>
+          <_0:averageVehicleSpeed>133.0</_0:averageVehicleSpeed>
+        </_0:basicDataValue>
+      </_0:measuredValue>
+      <_0:measuredValue index="1">
+        <_0:measurementEquipmentTypeUsed>
+          <_0:value>Detector</_0:value>
+        </_0:measurementEquipmentTypeUsed>
+        <_0:basicDataValue xsi:type="_0:TrafficHeadway">
+          <_0:time>2026-09-10T22:23:00+02:00</_0:time>
+          <_0:affectedLocation xsi:type="_0:GroupOfLocationsByReference">
+            <_0:locationContainedInGroup xsi:type="_0:LocationByReference">
+              <_0:predefinedLocationReference>GUID_DET_138083</_0:predefinedLocationReference>
+            </_0:locationContainedInGroup>
+            <_0:predefinedLocationSetReference>GUID_Inventario_Detectores</_0:predefinedLocationSetReference>
+          </_0:affectedLocation>
+          <_0:averageDistanceHeadway>255.0</_0:averageDistanceHeadway>
+        </_0:basicDataValue>
+      </_0:measuredValue>
+      <_0:measuredValue index="2">
+        <_0:measurementEquipmentTypeUsed>
+          <_0:value>Detector</_0:value>
+        </_0:measurementEquipmentTypeUsed>
+        <_0:basicDataValue xsi:type="_0:TrafficFlow">
+          <_0:time>2026-09-10T22:23:00+02:00</_0:time>
+          <_0:affectedLocation xsi:type="_0:GroupOfLocationsByReference">
+            <_0:locationContainedInGroup xsi:type="_0:LocationByReference">
+              <_0:predefinedLocationReference>GUID_DET_138083</_0:predefinedLocationReference>
+            </_0:locationContainedInGroup>
+            <_0:predefinedLocationSetReference>GUID_Inventario_Detectores</_0:predefinedLocationSetReference>
+          </_0:affectedLocation>
+          <_0:vehicleFlow>120</_0:vehicleFlow>
+        </_0:basicDataValue>
+      </_0:measuredValue>
+      <_0:measuredValue index="3">
+        <_0:measurementEquipmentTypeUsed>
+          <_0:value>Detector</_0:value>
+        </_0:measurementEquipmentTypeUsed>
+        <_0:basicDataValue xsi:type="_0:TrafficConcentration">
+          <_0:time>2026-09-10T22:23:00+02:00</_0:time>
+          <_0:affectedLocation xsi:type="_0:GroupOfLocationsByReference">
+            <_0:locationContainedInGroup xsi:type="_0:LocationByReference">
+              <_0:predefinedLocationReference>GUID_DET_138083</_0:predefinedLocationReference>
+            </_0:locationContainedInGroup>
+            <_0:predefinedLocationSetReference>GUID_Inventario_Detectores</_0:predefinedLocationSetReference>
+          </_0:affectedLocation>
+          <_0:occupancy>0.0</_0:occupancy>
+        </_0:basicDataValue>
+      </_0:measuredValue>
+    </_0:siteMeasurements>
+    <_0:siteMeasurements>
+      <_0:measurementSiteReference>GUID_DET_140834</_0:measurementSiteReference>
+      <_0:measurementTimeDefault>2026-09-10T22:25:00+02:00</_0:measurementTimeDefault>
+      <_0:measuredValue index="0">
+        <_0:measurementEquipmentTypeUsed>
+          <_0:value>Detector</_0:value>
+        </_0:measurementEquipmentTypeUsed>
+        <_0:basicDataValue xsi:type="_0:TrafficFlow">
+          <_0:time>2026-09-10T22:25:00+02:00</_0:time>
+          <_0:affectedLocation xsi:type="_0:GroupOfLocationsByReference">
+            <_0:locationContainedInGroup xsi:type="_0:LocationByReference">
+              <_0:predefinedLocationReference>GUID_DET_140834</_0:predefinedLocationReference>
+            </_0:locationContainedInGroup>
+            <_0:predefinedLocationSetReference>GUID_Inventario_Detectores</_0:predefinedLocationSetReference>
+          </_0:affectedLocation>
+          <_0:vehicleFlow>300</_0:vehicleFlow>
+        </_0:basicDataValue>
+      </_0:measuredValue>
+      <_0:measuredValue index="1">
+        <_0:measurementEquipmentTypeUsed>
+          <_0:value>Detector</_0:value>
+        </_0:measurementEquipmentTypeUsed>
+        <_0:basicDataValue xsi:type="_0:TrafficConcentration">
+          <_0:time>2026-09-10T22:25:00+02:00</_0:time>
+          <_0:affectedLocation xsi:type="_0:GroupOfLocationsByReference">
+            <_0:locationContainedInGroup xsi:type="_0:LocationByReference">
+              <_0:predefinedLocationReference>GUID_DET_140834</_0:predefinedLocationReference>
+            </_0:locationContainedInGroup>
+            <_0:predefinedLocationSetReference>GUID_Inventario_Detectores</_0:predefinedLocationSetReference>
+          </_0:affectedLocation>
+          <_0:occupancy>6.0</_0:occupancy>
+        </_0:basicDataValue>
+      </_0:measuredValue>
+    </_0:siteMeasurements>
+    <_0:siteMeasurements>
+      <_0:measurementSiteReference>GUID_DET_133398</_0:measurementSiteReference>
+      <_0:measurementTimeDefault>2025-06-30T10:20:00+02:00</_0:measurementTimeDefault>
+      <_0:measuredValue index="0">
+        <_0:measurementEquipmentTypeUsed>
+          <_0:value>Detector</_0:value>
+        </_0:measurementEquipmentTypeUsed>
+        <_0:basicDataValue xsi:type="_0:TrafficSpeed">
+          <_0:time>2025-06-30T10:20:00+02:00</_0:time>
+          <_0:affectedLocation xsi:type="_0:GroupOfLocationsByReference">
+            <_0:locationContainedInGroup xsi:type="_0:LocationByReference">
+              <_0:predefinedLocationReference>GUID_DET_133398</_0:predefinedLocationReference>
+            </_0:locationContainedInGroup>
+            <_0:predefinedLocationSetReference>GUID_Inventario_Detectores</_0:predefinedLocationSetReference>
+          </_0:affectedLocation>
+          <_0:averageVehicleSpeed>0.0</_0:averageVehicleSpeed>
+        </_0:basicDataValue>
+      </_0:measuredValue>
+      <_0:measuredValue index="1">
+        <_0:measurementEquipmentTypeUsed>
+          <_0:value>Detector</_0:value>
+        </_0:measurementEquipmentTypeUsed>
+        <_0:basicDataValue xsi:type="_0:TrafficHeadway">
+          <_0:time>2025-06-30T10:20:00+02:00</_0:time>
+          <_0:affectedLocation xsi:type="_0:GroupOfLocationsByReference">
+            <_0:locationContainedInGroup xsi:type="_0:LocationByReference">
+              <_0:predefinedLocationReference>GUID_DET_133398</_0:predefinedLocationReference>
+            </_0:locationContainedInGroup>
+            <_0:predefinedLocationSetReference>GUID_Inventario_Detectores</_0:predefinedLocationSetReference>
+          </_0:affectedLocation>
+          <_0:averageDistanceHeadway>0.0</_0:averageDistanceHeadway>
+        </_0:basicDataValue>
+      </_0:measuredValue>
+      <_0:measuredValue index="2">
+        <_0:measurementEquipmentTypeUsed>
+          <_0:value>Detector</_0:value>
+        </_0:measurementEquipmentTypeUsed>
+        <_0:basicDataValue xsi:type="_0:TrafficFlow">
+          <_0:time>2025-06-30T10:20:00+02:00</_0:time>
+          <_0:affectedLocation xsi:type="_0:GroupOfLocationsByReference">
+            <_0:locationContainedInGroup xsi:type="_0:LocationByReference">
+              <_0:predefinedLocationReference>GUID_DET_133398</_0:predefinedLocationReference>
+            </_0:locationContainedInGroup>
+            <_0:predefinedLocationSetReference>GUID_Inventario_Detectores</_0:predefinedLocationSetReference>
+          </_0:affectedLocation>
+          <_0:vehicleFlow>0</_0:vehicleFlow>
+        </_0:basicDataValue>
+      </_0:measuredValue>
+      <_0:measuredValue index="3">
+        <_0:measurementEquipmentTypeUsed>
+          <_0:value>Detector</_0:value>
+        </_0:measurementEquipmentTypeUsed>
+        <_0:basicDataValue xsi:type="_0:TrafficConcentration">
+          <_0:time>2025-06-30T10:20:00+02:00</_0:time>
+          <_0:affectedLocation xsi:type="_0:GroupOfLocationsByReference">
+            <_0:locationContainedInGroup xsi:type="_0:LocationByReference">
+              <_0:predefinedLocationReference>GUID_DET_133398</_0:predefinedLocationReference>
+            </_0:locationContainedInGroup>
+            <_0:predefinedLocationSetReference>GUID_Inventario_Detectores</_0:predefinedLocationSetReference>
+          </_0:affectedLocation>
+          <_0:occupancy>0.0</_0:occupancy>
+        </_0:basicDataValue>
+      </_0:measuredValue>
+    </_0:siteMeasurements>
+    <_0:siteMeasurements>
+      <_0:measurementSiteReference>GUID_DET_133396</_0:measurementSiteReference>
+      <_0:measurementTimeDefault>2025-06-30T10:20:00+02:00</_0:measurementTimeDefault>
+      <_0:measuredValue index="0">
+        <_0:measurementEquipmentTypeUsed>
+          <_0:value>Detector</_0:value>
+        </_0:measurementEquipmentTypeUsed>
+        <_0:basicDataValue xsi:type="_0:TrafficSpeed">
+          <_0:time>2025-06-30T10:20:00+02:00</_0:time>
+          <_0:affectedLocation xsi:type="_0:GroupOfLocationsByReference">
+            <_0:locationContainedInGroup xsi:type="_0:LocationByReference">
+              <_0:predefinedLocationReference>GUID_DET_133396</_0:predefinedLocationReference>
+            </_0:locationContainedInGroup>
+            <_0:predefinedLocationSetReference>GUID_Inventario_Detectores</_0:predefinedLocationSetReference>
+          </_0:affectedLocation>
+          <_0:averageVehicleSpeed>0.0</_0:averageVehicleSpeed>
+        </_0:basicDataValue>
+      </_0:measuredValue>
+      <_0:measuredValue index="1">
+        <_0:measurementEquipmentTypeUsed>
+          <_0:value>Detector</_0:value>
+        </_0:measurementEquipmentTypeUsed>
+        <_0:basicDataValue xsi:type="_0:TrafficHeadway">
+          <_0:time>2025-06-30T10:20:00+02:00</_0:time>
+          <_0:affectedLocation xsi:type="_0:GroupOfLocationsByReference">
+            <_0:locationContainedInGroup xsi:type="_0:LocationByReference">
+              <_0:predefinedLocationReference>GUID_DET_133396</_0:predefinedLocationReference>
+            </_0:locationContainedInGroup>
+            <_0:predefinedLocationSetReference>GUID_Inventario_Detectores</_0:predefinedLocationSetReference>
+          </_0:affectedLocation>
+          <_0:averageDistanceHeadway>0.0</_0:averageDistanceHeadway>
+        </_0:basicDataValue>
+      </_0:measuredValue>
+      <_0:measuredValue index="2">
+        <_0:measurementEquipmentTypeUsed>
+          <_0:value>Detector</_0:value>
+        </_0:measurementEquipmentTypeUsed>
+        <_0:basicDataValue xsi:type="_0:TrafficFlow">
+          <_0:time>2025-06-30T10:20:00+02:00</_0:time>
+          <_0:affectedLocation xsi:type="_0:GroupOfLocationsByReference">
+            <_0:locationContainedInGroup xsi:type="_0:LocationByReference">
+              <_0:predefinedLocationReference>GUID_DET_133396</_0:predefinedLocationReference>
+            </_0:locationContainedInGroup>
+            <_0:predefinedLocationSetReference>GUID_Inventario_Detectores</_0:predefinedLocationSetReference>
+          </_0:affectedLocation>
+          <_0:vehicleFlow>0</_0:vehicleFlow>
+        </_0:basicDataValue>
+      </_0:measuredValue>
+      <_0:measuredValue index="3">
+        <_0:measurementEquipmentTypeUsed>
+          <_0:value>Detector</_0:value>
+        </_0:measurementEquipmentTypeUsed>
+        <_0:basicDataValue xsi:type="_0:TrafficConcentration">
+          <_0:time>2025-06-30T10:20:00+02:00</_0:time>
+          <_0:affectedLocation xsi:type="_0:GroupOfLocationsByReference">
+            <_0:locationContainedInGroup xsi:type="_0:LocationByReference">
+              <_0:predefinedLocationReference>GUID_DET_133396</_0:predefinedLocationReference>
+            </_0:locationContainedInGroup>
+            <_0:predefinedLocationSetReference>GUID_Inventario_Detectores</_0:predefinedLocationSetReference>
+          </_0:affectedLocation>
+          <_0:occupancy>0.0</_0:occupancy>
+        </_0:basicDataValue>
+      </_0:measuredValue>
+    </_0:siteMeasurements>
+    <_0:siteMeasurements>
+      <_0:measurementSiteReference>GUID_DET_168863</_0:measurementSiteReference>
+      <_0:measurementTimeDefault>2026-09-10T22:26:00+02:00</_0:measurementTimeDefault>
+      <_0:measuredValue index="0">
+        <_0:measurementEquipmentTypeUsed>
+          <_0:value>Detector</_0:value>
+        </_0:measurementEquipmentTypeUsed>
+        <_0:basicDataValue xsi:type="_0:TrafficSpeed">
+          <_0:time>2026-09-10T22:26:00+02:00</_0:time>
+          <_0:affectedLocation xsi:type="_0:GroupOfLocationsByReference">
+            <_0:locationContainedInGroup xsi:type="_0:LocationByReference">
+              <_0:predefinedLocationReference>GUID_DET_168863</_0:predefinedLocationReference>
+            </_0:locationContainedInGroup>
+            <_0:predefinedLocationSetReference>GUID_Inventario_Detectores</_0:predefinedLocationSetReference>
+          </_0:affectedLocation>
+          <_0:averageVehicleSpeed>0.0</_0:averageVehicleSpeed>
+        </_0:basicDataValue>
+      </_0:measuredValue>
+      <_0:measuredValue index="1">
+        <_0:measurementEquipmentTypeUsed>
+          <_0:value>Detector</_0:value>
+        </_0:measurementEquipmentTypeUsed>
+        <_0:basicDataValue xsi:type="_0:TrafficHeadway">
+          <_0:time>2026-09-10T22:26:00+02:00</_0:time>
+          <_0:affectedLocation xsi:type="_0:GroupOfLocationsByReference">
+            <_0:locationContainedInGroup xsi:type="_0:LocationByReference">
+              <_0:predefinedLocationReference>GUID_DET_168863</_0:predefinedLocationReference>
+            </_0:locationContainedInGroup>
+            <_0:predefinedLocationSetReference>GUID_Inventario_Detectores</_0:predefinedLocationSetReference>
+          </_0:affectedLocation>
+          <_0:averageDistanceHeadway>0.0</_0:averageDistanceHeadway>
+        </_0:basicDataValue>
+      </_0:measuredValue>
+      <_0:measuredValue index="2">
+        <_0:measurementEquipmentTypeUsed>
+          <_0:value>Detector</_0:value>
+        </_0:measurementEquipmentTypeUsed>
+        <_0:basicDataValue xsi:type="_0:TrafficFlow">
+          <_0:time>2026-09-10T22:26:00+02:00</_0:time>
+          <_0:affectedLocation xsi:type="_0:GroupOfLocationsByReference">
+            <_0:locationContainedInGroup xsi:type="_0:LocationByReference">
+              <_0:predefinedLocationReference>GUID_DET_168863</_0:predefinedLocationReference>
+            </_0:locationContainedInGroup>
+            <_0:predefinedLocationSetReference>GUID_Inventario_Detectores</_0:predefinedLocationSetReference>
+          </_0:affectedLocation>
+          <_0:vehicleFlow>0</_0:vehicleFlow>
+        </_0:basicDataValue>
+      </_0:measuredValue>
+      <_0:measuredValue index="3">
+        <_0:measurementEquipmentTypeUsed>
+          <_0:value>Detector</_0:value>
+        </_0:measurementEquipmentTypeUsed>
+        <_0:basicDataValue xsi:type="_0:TrafficConcentration">
+          <_0:time>2026-09-10T22:26:00+02:00</_0:time>
+          <_0:affectedLocation xsi:type="_0:GroupOfLocationsByReference">
+            <_0:locationContainedInGroup xsi:type="_0:LocationByReference">
+              <_0:predefinedLocationReference>GUID_DET_168863</_0:predefinedLocationReference>
+            </_0:locationContainedInGroup>
+            <_0:predefinedLocationSetReference>GUID_Inventario_Detectores</_0:predefinedLocationSetReference>
+          </_0:affectedLocation>
+          <_0:occupancy>0.0</_0:occupancy>
+        </_0:basicDataValue>
+      </_0:measuredValue>
+    </_0:siteMeasurements>
+    <_0:siteMeasurements>
+      <_0:measurementSiteReference>GUID_DET_130243</_0:measurementSiteReference>
+      <_0:measurementTimeDefault>2026-09-10T22:25:00+02:00</_0:measurementTimeDefault>
+      <_0:measuredValue index="0">
+        <_0:measurementEquipmentTypeUsed>
+          <_0:value>Detector</_0:value>
+        </_0:measurementEquipmentTypeUsed>
+        <_0:basicDataValue xsi:type="_0:TrafficFlow">
+          <_0:time>2026-09-10T22:25:00+02:00</_0:time>
+          <_0:affectedLocation xsi:type="_0:GroupOfLocationsByReference">
+            <_0:locationContainedInGroup xsi:type="_0:LocationByReference">
+              <_0:predefinedLocationReference>GUID_DET_130243</_0:predefinedLocationReference>
+            </_0:locationContainedInGroup>
+            <_0:predefinedLocationSetReference>GUID_Inventario_Detectores</_0:predefinedLocationSetReference>
+          </_0:affectedLocation>
+          <_0:vehicleFlow>60</_0:vehicleFlow>
+        </_0:basicDataValue>
+      </_0:measuredValue>
+      <_0:measuredValue index="1">
+        <_0:measurementEquipmentTypeUsed>
+          <_0:value>Detector</_0:value>
+        </_0:measurementEquipmentTypeUsed>
+        <_0:basicDataValue xsi:type="_0:TrafficConcentration">
+          <_0:time>2026-09-10T22:25:00+02:00</_0:time>
+          <_0:affectedLocation xsi:type="_0:GroupOfLocationsByReference">
+            <_0:locationContainedInGroup xsi:type="_0:LocationByReference">
+              <_0:predefinedLocationReference>GUID_DET_130243</_0:predefinedLocationReference>
+            </_0:locationContainedInGroup>
+            <_0:predefinedLocationSetReference>GUID_Inventario_Detectores</_0:predefinedLocationSetReference>
+          </_0:affectedLocation>
+          <_0:occupancy>0.0</_0:occupancy>
+        </_0:basicDataValue>
+      </_0:measuredValue>
+    </_0:siteMeasurements>
+    <_0:siteMeasurements>
+      <_0:measurementSiteReference>GUID_DET_138082</_0:measurementSiteReference>
+      <_0:measurementTimeDefault>2026-09-10T22:25:00+02:00</_0:measurementTimeDefault>
+      <_0:measuredValue index="0">
+        <_0:measurementEquipmentTypeUsed>
+          <_0:value>Detector</_0:value>
+        </_0:measurementEquipmentTypeUsed>
+        <_0:basicDataValue xsi:type="_0:TrafficSpeed">
+          <_0:time>2026-09-10T22:25:00+02:00</_0:time>
+          <_0:affectedLocation xsi:type="_0:GroupOfLocationsByReference">
+            <_0:locationContainedInGroup xsi:type="_0:LocationByReference">
+              <_0:predefinedLocationReference>GUID_DET_138082</_0:predefinedLocationReference>
+            </_0:locationContainedInGroup>
+            <_0:predefinedLocationSetReference>GUID_Inventario_Detectores</_0:predefinedLocationSetReference>
+          </_0:affectedLocation>
+          <_0:averageVehicleSpeed>100.0</_0:averageVehicleSpeed>
+        </_0:basicDataValue>
+      </_0:measuredValue>
+      <_0:measuredValue index="1">
+        <_0:measurementEquipmentTypeUsed>
+          <_0:value>Detector</_0:value>
+        </_0:measurementEquipmentTypeUsed>
+        <_0:basicDataValue xsi:type="_0:TrafficHeadway">
+          <_0:time>2026-09-10T22:25:00+02:00</_0:time>
+          <_0:affectedLocation xsi:type="_0:GroupOfLocationsByReference">
+            <_0:locationContainedInGroup xsi:type="_0:LocationByReference">
+              <_0:predefinedLocationReference>GUID_DET_138082</_0:predefinedLocationReference>
+            </_0:locationContainedInGroup>
+            <_0:predefinedLocationSetReference>GUID_Inventario_Detectores</_0:predefinedLocationSetReference>
+          </_0:affectedLocation>
+          <_0:averageDistanceHeadway>148.0</_0:averageDistanceHeadway>
+        </_0:basicDataValue>
+      </_0:measuredValue>
+      <_0:measuredValue index="2">
+        <_0:measurementEquipmentTypeUsed>
+          <_0:value>Detector</_0:value>
+        </_0:measurementEquipmentTypeUsed>
+        <_0:basicDataValue xsi:type="_0:TrafficFlow">
+          <_0:time>2026-09-10T22:25:00+02:00</_0:time>
+          <_0:affectedLocation xsi:type="_0:GroupOfLocationsByReference">
+            <_0:locationContainedInGroup xsi:type="_0:LocationByReference">
+              <_0:predefinedLocationReference>GUID_DET_138082</_0:predefinedLocationReference>
+            </_0:locationContainedInGroup>
+            <_0:predefinedLocationSetReference>GUID_Inventario_Detectores</_0:predefinedLocationSetReference>
+          </_0:affectedLocation>
+          <_0:vehicleFlow>360</_0:vehicleFlow>
+        </_0:basicDataValue>
+      </_0:measuredValue>
+      <_0:measuredValue index="3">
+        <_0:measurementEquipmentTypeUsed>
+          <_0:value>Detector</_0:value>
+        </_0:measurementEquipmentTypeUsed>
+        <_0:basicDataValue xsi:type="_0:TrafficConcentration">
+          <_0:time>2026-09-10T22:25:00+02:00</_0:time>
+          <_0:affectedLocation xsi:type="_0:GroupOfLocationsByReference">
+            <_0:locationContainedInGroup xsi:type="_0:LocationByReference">
+              <_0:predefinedLocationReference>GUID_DET_138082</_0:predefinedLocationReference>
+            </_0:locationContainedInGroup>
+            <_0:predefinedLocationSetReference>GUID_Inventario_Detectores</_0:predefinedLocationSetReference>
+          </_0:affectedLocation>
+          <_0:occupancy>4.0</_0:occupancy>
+        </_0:basicDataValue>
+      </_0:measuredValue>
+    </_0:siteMeasurements>
+    <_0:siteMeasurements>
+      <_0:measurementSiteReference>GUID_DET_141438</_0:measurementSiteReference>
+      <_0:measurementTimeDefault>2026-09-10T22:25:00+02:00</_0:measurementTimeDefault>
+      <_0:measuredValue index="0">
+        <_0:measurementEquipmentTypeUsed>
+          <_0:value>Detector</_0:value>
+        </_0:measurementEquipmentTypeUsed>
+        <_0:basicDataValue xsi:type="_0:TrafficSpeed">
+          <_0:time>2026-09-10T22:25:00+02:00</_0:time>
+          <_0:affectedLocation xsi:type="_0:GroupOfLocationsByReference">
+            <_0:locationContainedInGroup xsi:type="_0:LocationByReference">
+              <_0:predefinedLocationReference>GUID_DET_141438</_0:predefinedLocationReference>
+            </_0:locationContainedInGroup>
+            <_0:predefinedLocationSetReference>GUID_Inventario_Detectores</_0:predefinedLocationSetReference>
+          </_0:affectedLocation>
+          <_0:averageVehicleSpeed>80.0</_0:averageVehicleSpeed>
+        </_0:basicDataValue>
+      </_0:measuredValue>
+      <_0:measuredValue index="1">
+        <_0:measurementEquipmentTypeUsed>
+          <_0:value>Detector</_0:value>
+        </_0:measurementEquipmentTypeUsed>
+        <_0:basicDataValue xsi:type="_0:TrafficHeadway">
+          <_0:time>2026-09-10T22:25:00+02:00</_0:time>
+          <_0:affectedLocation xsi:type="_0:GroupOfLocationsByReference">
+            <_0:locationContainedInGroup xsi:type="_0:LocationByReference">
+              <_0:predefinedLocationReference>GUID_DET_141438</_0:predefinedLocationReference>
+            </_0:locationContainedInGroup>
+            <_0:predefinedLocationSetReference>GUID_Inventario_Detectores</_0:predefinedLocationSetReference>
+          </_0:affectedLocation>
+          <_0:averageDistanceHeadway>201.0</_0:averageDistanceHeadway>
+        </_0:basicDataValue>
+      </_0:measuredValue>
+      <_0:measuredValue index="2">
+        <_0:measurementEquipmentTypeUsed>
+          <_0:value>Detector</_0:value>
+        </_0:measurementEquipmentTypeUsed>
+        <_0:basicDataValue xsi:type="_0:TrafficFlow">
+          <_0:time>2026-09-10T22:25:00+02:00</_0:time>
+          <_0:affectedLocation xsi:type="_0:GroupOfLocationsByReference">
+            <_0:locationContainedInGroup xsi:type="_0:LocationByReference">
+              <_0:predefinedLocationReference>GUID_DET_141438</_0:predefinedLocationReference>
+            </_0:locationContainedInGroup>
+            <_0:predefinedLocationSetReference>GUID_Inventario_Detectores</_0:predefinedLocationSetReference>
+          </_0:affectedLocation>
+          <_0:percentageLongVehicles>0.0</_0:percentageLongVehicles>
+          <_0:vehicleFlow>300</_0:vehicleFlow>
+        </_0:basicDataValue>
+      </_0:measuredValue>
+      <_0:measuredValue index="3">
+        <_0:measurementEquipmentTypeUsed>
+          <_0:value>Detector</_0:value>
+        </_0:measurementEquipmentTypeUsed>
+        <_0:basicDataValue xsi:type="_0:TrafficConcentration">
+          <_0:time>2026-09-10T22:25:00+02:00</_0:time>
+          <_0:affectedLocation xsi:type="_0:GroupOfLocationsByReference">
+            <_0:locationContainedInGroup xsi:type="_0:LocationByReference">
+              <_0:predefinedLocationReference>GUID_DET_141438</_0:predefinedLocationReference>
+            </_0:locationContainedInGroup>
+            <_0:predefinedLocationSetReference>GUID_Inventario_Detectores</_0:predefinedLocationSetReference>
+          </_0:affectedLocation>
+          <_0:occupancy>2.0</_0:occupancy>
+        </_0:basicDataValue>
+      </_0:measuredValue>
+    </_0:siteMeasurements>
+    <_0:siteMeasurements>
+      <_0:measurementSiteReference>GUID_DET_130397</_0:measurementSiteReference>
+      <_0:measurementTimeDefault>2026-09-10T22:25:00+02:00</_0:measurementTimeDefault>
+      <_0:measuredValue index="0">
+        <_0:measurementEquipmentTypeUsed>
+          <_0:value>Detector</_0:value>
+        </_0:measurementEquipmentTypeUsed>
+        <_0:basicDataValue xsi:type="_0:TrafficSpeed">
+          <_0:time>2026-09-10T22:25:00+02:00</_0:time>
+          <_0:affectedLocation xsi:type="_0:GroupOfLocationsByReference">
+            <_0:locationContainedInGroup xsi:type="_0:LocationByReference">
+              <_0:predefinedLocationReference>GUID_DET_130397</_0:predefinedLocationReference>
+            </_0:locationContainedInGroup>
+            <_0:predefinedLocationSetReference>GUID_Inventario_Detectores</_0:predefinedLocationSetReference>
+          </_0:affectedLocation>
+          <_0:averageVehicleSpeed>113.0</_0:averageVehicleSpeed>
+        </_0:basicDataValue>
+      </_0:measuredValue>
+      <_0:measuredValue index="1">
+        <_0:measurementEquipmentTypeUsed>
+          <_0:value>Detector</_0:value>
+        </_0:measurementEquipmentTypeUsed>
+        <_0:basicDataValue xsi:type="_0:TrafficHeadway">
+          <_0:time>2026-09-10T22:25:00+02:00</_0:time>
+          <_0:affectedLocation xsi:type="_0:GroupOfLocationsByReference">
+            <_0:locationContainedInGroup xsi:type="_0:LocationByReference">
+              <_0:predefinedLocationReference>GUID_DET_130397</_0:predefinedLocationReference>
+            </_0:locationContainedInGroup>
+            <_0:predefinedLocationSetReference>GUID_Inventario_Detectores</_0:predefinedLocationSetReference>
+          </_0:affectedLocation>
+          <_0:averageDistanceHeadway>255.0</_0:averageDistanceHeadway>
+        </_0:basicDataValue>
+      </_0:measuredValue>
+      <_0:measuredValue index="2">
+        <_0:measurementEquipmentTypeUsed>
+          <_0:value>Detector</_0:value>
+        </_0:measurementEquipmentTypeUsed>
+        <_0:basicDataValue xsi:type="_0:TrafficFlow">
+          <_0:time>2026-09-10T22:25:00+02:00</_0:time>
+          <_0:affectedLocation xsi:type="_0:GroupOfLocationsByReference">
+            <_0:locationContainedInGroup xsi:type="_0:LocationByReference">
+              <_0:predefinedLocationReference>GUID_DET_130397</_0:predefinedLocationReference>
+            </_0:locationContainedInGroup>
+            <_0:predefinedLocationSetReference>GUID_Inventario_Detectores</_0:predefinedLocationSetReference>
+          </_0:affectedLocation>
+          <_0:percentageLongVehicles>0.0</_0:percentageLongVehicles>
+          <_0:vehicleFlow>120</_0:vehicleFlow>
+        </_0:basicDataValue>
+      </_0:measuredValue>
+      <_0:measuredValue index="3">
+        <_0:measurementEquipmentTypeUsed>
+          <_0:value>Detector</_0:value>
+        </_0:measurementEquipmentTypeUsed>
+        <_0:basicDataValue xsi:type="_0:TrafficConcentration">
+          <_0:time>2026-09-10T22:25:00+02:00</_0:time>
+          <_0:affectedLocation xsi:type="_0:GroupOfLocationsByReference">
+            <_0:locationContainedInGroup xsi:type="_0:LocationByReference">
+              <_0:predefinedLocationReference>GUID_DET_130397</_0:predefinedLocationReference>
+            </_0:locationContainedInGroup>
+            <_0:predefinedLocationSetReference>GUID_Inventario_Detectores</_0:predefinedLocationSetReference>
+          </_0:affectedLocation>
+          <_0:occupancy>0.0</_0:occupancy>
+        </_0:basicDataValue>
+      </_0:measuredValue>
+    </_0:siteMeasurements>
+    <_0:siteMeasurements>
+      <_0:measurementSiteReference>GUID_DET_137913</_0:measurementSiteReference>
+      <_0:measurementTimeDefault>2026-09-10T22:25:00+02:00</_0:measurementTimeDefault>
+      <_0:measuredValue index="0">
+        <_0:measurementEquipmentTypeUsed>
+          <_0:value>Detector</_0:value>
+        </_0:measurementEquipmentTypeUsed>
+        <_0:basicDataValue xsi:type="_0:TrafficSpeed">
+          <_0:time>2026-09-10T22:25:00+02:00</_0:time>
+          <_0:affectedLocation xsi:type="_0:GroupOfLocationsByReference">
+            <_0:locationContainedInGroup xsi:type="_0:LocationByReference">
+              <_0:predefinedLocationReference>GUID_DET_137913</_0:predefinedLocationReference>
+            </_0:locationContainedInGroup>
+            <_0:predefinedLocationSetReference>GUID_Inventario_Detectores</_0:predefinedLocationSetReference>
+          </_0:affectedLocation>
+          <_0:averageVehicleSpeed>57.0</_0:averageVehicleSpeed>
+        </_0:basicDataValue>
+      </_0:measuredValue>
+      <_0:measuredValue index="1">
+        <_0:measurementEquipmentTypeUsed>
+          <_0:value>Detector</_0:value>
+        </_0:measurementEquipmentTypeUsed>
+        <_0:basicDataValue xsi:type="_0:TrafficHeadway">
+          <_0:time>2026-09-10T22:25:00+02:00</_0:time>
+          <_0:affectedLocation xsi:type="_0:GroupOfLocationsByReference">
+            <_0:locationContainedInGroup xsi:type="_0:LocationByReference">
+              <_0:predefinedLocationReference>GUID_DET_137913</_0:predefinedLocationReference>
+            </_0:locationContainedInGroup>
+            <_0:predefinedLocationSetReference>GUID_Inventario_Detectores</_0:predefinedLocationSetReference>
+          </_0:affectedLocation>
+          <_0:averageDistanceHeadway>28.0</_0:averageDistanceHeadway>
+        </_0:basicDataValue>
+      </_0:measuredValue>
+      <_0:measuredValue index="2">
+        <_0:measurementEquipmentTypeUsed>
+          <_0:value>Detector</_0:value>
+        </_0:measurementEquipmentTypeUsed>
+        <_0:basicDataValue xsi:type="_0:TrafficFlow">
+          <_0:time>2026-09-10T22:25:00+02:00</_0:time>
+          <_0:affectedLocation xsi:type="_0:GroupOfLocationsByReference">
+            <_0:locationContainedInGroup xsi:type="_0:LocationByReference">
+              <_0:predefinedLocationReference>GUID_DET_137913</_0:predefinedLocationReference>
+            </_0:locationContainedInGroup>
+            <_0:predefinedLocationSetReference>GUID_Inventario_Detectores</_0:predefinedLocationSetReference>
+          </_0:affectedLocation>
+          <_0:percentageLongVehicles>0.0</_0:percentageLongVehicles>
+          <_0:vehicleFlow>480</_0:vehicleFlow>
+        </_0:basicDataValue>
+      </_0:measuredValue>
+      <_0:measuredValue index="3">
+        <_0:measurementEquipmentTypeUsed>
+          <_0:value>Detector</_0:value>
+        </_0:measurementEquipmentTypeUsed>
+        <_0:basicDataValue xsi:type="_0:TrafficConcentration">
+          <_0:time>2026-09-10T22:25:00+02:00</_0:time>
+          <_0:affectedLocation xsi:type="_0:GroupOfLocationsByReference">
+            <_0:locationContainedInGroup xsi:type="_0:LocationByReference">
+              <_0:predefinedLocationReference>GUID_DET_137913</_0:predefinedLocationReference>
+            </_0:locationContainedInGroup>
+            <_0:predefinedLocationSetReference>GUID_Inventario_Detectores</_0:predefinedLocationSetReference>
+          </_0:affectedLocation>
+          <_0:occupancy>4.0</_0:occupancy>
+        </_0:basicDataValue>
+      </_0:measuredValue>
+    </_0:siteMeasurements>
+    <_0:siteMeasurements>
+      <_0:measurementSiteReference>GUID_DET_139376</_0:measurementSiteReference>
+      <_0:measurementTimeDefault>2026-09-10T22:25:00+02:00</_0:measurementTimeDefault>
+      <_0:measuredValue index="0">
+        <_0:measurementEquipmentTypeUsed>
+          <_0:value>Detector</_0:value>
+        </_0:measurementEquipmentTypeUsed>
+        <_0:basicDataValue xsi:type="_0:TrafficSpeed">
+          <_0:time>2026-09-10T22:25:00+02:00</_0:time>
+          <_0:affectedLocation xsi:type="_0:GroupOfLocationsByReference">
+            <_0:locationContainedInGroup xsi:type="_0:LocationByReference">
+              <_0:predefinedLocationReference>GUID_DET_139376</_0:predefinedLocationReference>
+            </_0:locationContainedInGroup>
+            <_0:predefinedLocationSetReference>GUID_Inventario_Detectores</_0:predefinedLocationSetReference>
+          </_0:affectedLocation>
+          <_0:averageVehicleSpeed>85.0</_0:averageVehicleSpeed>
+        </_0:basicDataValue>
+      </_0:measuredValue>
+      <_0:measuredValue index="1">
+        <_0:measurementEquipmentTypeUsed>
+          <_0:value>Detector</_0:value>
+        </_0:measurementEquipmentTypeUsed>
+        <_0:basicDataValue xsi:type="_0:TrafficHeadway">
+          <_0:time>2026-09-10T22:25:00+02:00</_0:time>
+          <_0:affectedLocation xsi:type="_0:GroupOfLocationsByReference">
+            <_0:locationContainedInGroup xsi:type="_0:LocationByReference">
+              <_0:predefinedLocationReference>GUID_DET_139376</_0:predefinedLocationReference>
+            </_0:locationContainedInGroup>
+            <_0:predefinedLocationSetReference>GUID_Inventario_Detectores</_0:predefinedLocationSetReference>
+          </_0:affectedLocation>
+          <_0:averageDistanceHeadway>137.0</_0:averageDistanceHeadway>
+        </_0:basicDataValue>
+      </_0:measuredValue>
+      <_0:measuredValue index="2">
+        <_0:measurementEquipmentTypeUsed>
+          <_0:value>Detector</_0:value>
+        </_0:measurementEquipmentTypeUsed>
+        <_0:basicDataValue xsi:type="_0:TrafficFlow">
+          <_0:time>2026-09-10T22:25:00+02:00</_0:time>
+          <_0:affectedLocation xsi:type="_0:GroupOfLocationsByReference">
+            <_0:locationContainedInGroup xsi:type="_0:LocationByReference">
+              <_0:predefinedLocationReference>GUID_DET_139376</_0:predefinedLocationReference>
+            </_0:locationContainedInGroup>
+            <_0:predefinedLocationSetReference>GUID_Inventario_Detectores</_0:predefinedLocationSetReference>
+          </_0:affectedLocation>
+          <_0:percentageLongVehicles>0.0</_0:percentageLongVehicles>
+          <_0:vehicleFlow>240</_0:vehicleFlow>
+        </_0:basicDataValue>
+      </_0:measuredValue>
+      <_0:measuredValue index="3">
+        <_0:measurementEquipmentTypeUsed>
+          <_0:value>Detector</_0:value>
+        </_0:measurementEquipmentTypeUsed>
+        <_0:basicDataValue xsi:type="_0:TrafficConcentration">
+          <_0:time>2026-09-10T22:25:00+02:00</_0:time>
+          <_0:affectedLocation xsi:type="_0:GroupOfLocationsByReference">
+            <_0:locationContainedInGroup xsi:type="_0:LocationByReference">
+              <_0:predefinedLocationReference>GUID_DET_139376</_0:predefinedLocationReference>
+            </_0:locationContainedInGroup>
+            <_0:predefinedLocationSetReference>GUID_Inventario_Detectores</_0:predefinedLocationSetReference>
+          </_0:affectedLocation>
+          <_0:occupancy>1.0</_0:occupancy>
+        </_0:basicDataValue>
+      </_0:measuredValue>
+    </_0:siteMeasurements>
+    <_0:siteMeasurements>
+      <_0:measurementSiteReference>GUID_DET_140975</_0:measurementSiteReference>
+      <_0:measurementTimeDefault>2026-09-10T22:25:00+02:00</_0:measurementTimeDefault>
+      <_0:measuredValue index="0">
+        <_0:measurementEquipmentTypeUsed>
+          <_0:value>Detector</_0:value>
+        </_0:measurementEquipmentTypeUsed>
+        <_0:basicDataValue xsi:type="_0:TrafficSpeed">
+          <_0:time>2026-09-10T22:25:00+02:00</_0:time>
+          <_0:affectedLocation xsi:type="_0:GroupOfLocationsByReference">
+            <_0:locationContainedInGroup xsi:type="_0:LocationByReference">
+              <_0:predefinedLocationReference>GUID_DET_140975</_0:predefinedLocationReference>
+            </_0:locationContainedInGroup>
+            <_0:predefinedLocationSetReference>GUID_Inventario_Detectores</_0:predefinedLocationSetReference>
+          </_0:affectedLocation>
+          <_0:averageVehicleSpeed>26.0</_0:averageVehicleSpeed>
+        </_0:basicDataValue>
+      </_0:measuredValue>
+      <_0:measuredValue index="1">
+        <_0:measurementEquipmentTypeUsed>
+          <_0:value>Detector</_0:value>
+        </_0:measurementEquipmentTypeUsed>
+        <_0:basicDataValue xsi:type="_0:TrafficHeadway">
+          <_0:time>2026-09-10T22:25:00+02:00</_0:time>
+          <_0:affectedLocation xsi:type="_0:GroupOfLocationsByReference">
+            <_0:locationContainedInGroup xsi:type="_0:LocationByReference">
+              <_0:predefinedLocationReference>GUID_DET_140975</_0:predefinedLocationReference>
+            </_0:locationContainedInGroup>
+            <_0:predefinedLocationSetReference>GUID_Inventario_Detectores</_0:predefinedLocationSetReference>
+          </_0:affectedLocation>
+          <_0:averageDistanceHeadway>90.0</_0:averageDistanceHeadway>
+        </_0:basicDataValue>
+      </_0:measuredValue>
+      <_0:measuredValue index="2">
+        <_0:measurementEquipmentTypeUsed>
+          <_0:value>Detector</_0:value>
+        </_0:measurementEquipmentTypeUsed>
+        <_0:basicDataValue xsi:type="_0:TrafficFlow">
+          <_0:time>2026-09-10T22:25:00+02:00</_0:time>
+          <_0:affectedLocation xsi:type="_0:GroupOfLocationsByReference">
+            <_0:locationContainedInGroup xsi:type="_0:LocationByReference">
+              <_0:predefinedLocationReference>GUID_DET_140975</_0:predefinedLocationReference>
+            </_0:locationContainedInGroup>
+            <_0:predefinedLocationSetReference>GUID_Inventario_Detectores</_0:predefinedLocationSetReference>
+          </_0:affectedLocation>
+          <_0:vehicleFlow>360</_0:vehicleFlow>
+        </_0:basicDataValue>
+      </_0:measuredValue>
+      <_0:measuredValue index="3">
+        <_0:measurementEquipmentTypeUsed>
+          <_0:value>Detector</_0:value>
+        </_0:measurementEquipmentTypeUsed>
+        <_0:basicDataValue xsi:type="_0:TrafficConcentration">
+          <_0:time>2026-09-10T22:25:00+02:00</_0:time>
+          <_0:affectedLocation xsi:type="_0:GroupOfLocationsByReference">
+            <_0:locationContainedInGroup xsi:type="_0:LocationByReference">
+              <_0:predefinedLocationReference>GUID_DET_140975</_0:predefinedLocationReference>
+            </_0:locationContainedInGroup>
+            <_0:predefinedLocationSetReference>GUID_Inventario_Detectores</_0:predefinedLocationSetReference>
+          </_0:affectedLocation>
+          <_0:occupancy>9.0</_0:occupancy>
+        </_0:basicDataValue>
+      </_0:measuredValue>
+    </_0:siteMeasurements>
+    <_0:siteMeasurements>
+      <_0:measurementSiteReference>GUID_DET_139710</_0:measurementSiteReference>
+      <_0:measurementTimeDefault>2026-09-10T22:25:00+02:00</_0:measurementTimeDefault>
+      <_0:measuredValue index="0">
+        <_0:measurementEquipmentTypeUsed>
+          <_0:value>Detector</_0:value>
+        </_0:measurementEquipmentTypeUsed>
+        <_0:basicDataValue xsi:type="_0:TrafficSpeed">
+          <_0:time>2026-09-10T22:25:00+02:00</_0:time>
+          <_0:affectedLocation xsi:type="_0:GroupOfLocationsByReference">
+            <_0:locationContainedInGroup xsi:type="_0:LocationByReference">
+              <_0:predefinedLocationReference>GUID_DET_139710</_0:predefinedLocationReference>
+            </_0:locationContainedInGroup>
+            <_0:predefinedLocationSetReference>GUID_Inventario_Detectores</_0:predefinedLocationSetReference>
+          </_0:affectedLocation>
+          <_0:averageVehicleSpeed>39.0</_0:averageVehicleSpeed>
+        </_0:basicDataValue>
+      </_0:measuredValue>
+      <_0:measuredValue index="1">
+        <_0:measurementEquipmentTypeUsed>
+          <_0:value>Detector</_0:value>
+        </_0:measurementEquipmentTypeUsed>
+        <_0:basicDataValue xsi:type="_0:TrafficHeadway">
+          <_0:time>2026-09-10T22:25:00+02:00</_0:time>
+          <_0:affectedLocation xsi:type="_0:GroupOfLocationsByReference">
+            <_0:locationContainedInGroup xsi:type="_0:LocationByReference">
+              <_0:predefinedLocationReference>GUID_DET_139710</_0:predefinedLocationReference>
+            </_0:locationContainedInGroup>
+            <_0:predefinedLocationSetReference>GUID_Inventario_Detectores</_0:predefinedLocationSetReference>
+          </_0:affectedLocation>
+          <_0:averageDistanceHeadway>47.0</_0:averageDistanceHeadway>
+        </_0:basicDataValue>
+      </_0:measuredValue>
+      <_0:measuredValue index="2">
+        <_0:measurementEquipmentTypeUsed>
+          <_0:value>Detector</_0:value>
+        </_0:measurementEquipmentTypeUsed>
+        <_0:basicDataValue xsi:type="_0:TrafficFlow">
+          <_0:time>2026-09-10T22:25:00+02:00</_0:time>
+          <_0:affectedLocation xsi:type="_0:GroupOfLocationsByReference">
+            <_0:locationContainedInGroup xsi:type="_0:LocationByReference">
+              <_0:predefinedLocationReference>GUID_DET_139710</_0:predefinedLocationReference>
+            </_0:locationContainedInGroup>
+            <_0:predefinedLocationSetReference>GUID_Inventario_Detectores</_0:predefinedLocationSetReference>
+          </_0:affectedLocation>
+          <_0:vehicleFlow>240</_0:vehicleFlow>
+        </_0:basicDataValue>
+      </_0:measuredValue>
+      <_0:measuredValue index="3">
+        <_0:measurementEquipmentTypeUsed>
+          <_0:value>Detector</_0:value>
+        </_0:measurementEquipmentTypeUsed>
+        <_0:basicDataValue xsi:type="_0:TrafficConcentration">
+          <_0:time>2026-09-10T22:25:00+02:00</_0:time>
+          <_0:affectedLocation xsi:type="_0:GroupOfLocationsByReference">
+            <_0:locationContainedInGroup xsi:type="_0:LocationByReference">
+              <_0:predefinedLocationReference>GUID_DET_139710</_0:predefinedLocationReference>
+            </_0:locationContainedInGroup>
+            <_0:predefinedLocationSetReference>GUID_Inventario_Detectores</_0:predefinedLocationSetReference>
+          </_0:affectedLocation>
+          <_0:occupancy>2.0</_0:occupancy>
+        </_0:basicDataValue>
+      </_0:measuredValue>
+    </_0:siteMeasurements>
+  </payloadPublication>
+</d2LogicalModel>
