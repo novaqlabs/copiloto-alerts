@@ -260,14 +260,27 @@ async function run(): Promise<void> {
       updateTraces(estado, cells);
       usuarios = userSites(cells, estado);
       const points = cells.reduce((acc, c) => acc + c.points, 0);
-      // Kilometros por trayecto (fase E, spec §3.6): la app los reclama despues con `claim_km`.
-      // Se preguntan primero las que ya estan para no reescribir una fila que quiza ya esta
-      // reclamada -el `Prefer: resolution=ignore-duplicates` de `insertTraceKm` es la segunda red-.
-      const existentes = await existingTraceKm(env, trips.map((t) => t.session));
-      const nuevos = pendingTraceKm(trips, existentes);
-      const kmEscritos = nuevos.length ? await insertTraceKm(env, nuevos) : 0;
       tracesMeta = { fetchedAt: now.toISOString(), files, points, ok: true };
-      log(`trazas: ${files} ficheros, ${points} puntos, ${usuarios.length} celdas publicadas, ${kmEscritos} trayectos con km nuevos`);
+      log(`trazas: ${files} ficheros, ${points} puntos, ${usuarios.length} celdas publicadas`);
+
+      // Kilometros por trayecto (fase E, spec §3.6): la app los reclama despues con `claim_km`. Va
+      // en su PROPIO try/catch (fix round 1): la recogida de trazas de arriba ya tuvo exito -tiene
+      // su `files`/`points` y su `ok: true`-, y un fallo escribiendo trace_km (por ejemplo, la tabla
+      // todavia no existe porque no se ha aplicado la migracion 0007) es un fallo DISTINTO que no
+      // debe pisar `sources.traces` con `ok: false` y `files: 0` como si la recogida hubiera fallado.
+      // Se preguntan primero las sesiones que ya estan para no reescribir una fila que quiza ya esta
+      // reclamada -el `Prefer: resolution=ignore-duplicates` de `insertTraceKm` es la segunda red-.
+      try {
+        const existentes = await existingTraceKm(env, trips.map((t) => t.session));
+        const nuevos = pendingTraceKm(trips, existentes);
+        const kmEscritos = nuevos.length ? await insertTraceKm(env, nuevos) : 0;
+        log(`trace_km: ${kmEscritos} trayectos con km nuevos`);
+      } catch (e) {
+        const error = e instanceof Error ? e.message : String(e);
+        // No se anota en meta.json (TracesSourceMeta no cambia de forma, decision D1): la traza en
+        // el log es la unica senal de este fallo, deliberadamente separada de "trazas: fallo (...)".
+        log(`trace_km: fallo (${error})`);
+      }
     } catch (e) {
       const error = e instanceof Error ? e.message : String(e);
       log(`trazas: fallo (${error})`);

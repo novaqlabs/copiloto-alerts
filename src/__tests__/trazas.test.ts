@@ -232,6 +232,38 @@ describe('kilometros y minutos por trayecto (fase E)', () => {
     expect(tripSummary('s', suelto!)).toBeUndefined();
   });
 
+  it('un salto de GPS en un punto intermedio descarta SOLO los dos tramos que lo tocan, no el trayecto entero', () => {
+    // R0-R1 y R3-R4 son tramos reales (0,01 grados en 300 s -> 13,34 km/h, plausible), igual que en
+    // RECTA. El punto central salta 1 grado de latitud (~111 km) en 300 s: mas de 1000 km/h, muy por
+    // encima del techo de 250 km/h -> los dos tramos que tocan el salto (R1-salto y salto-R3) se
+    // descartan, pero R0-R1 y R3-R4 se siguen sumando igual que si el salto no estuviera.
+    const conSalto = [
+      [0, 40.40, -3.70, 90, 0],
+      [300, 40.41, -3.70, 90, 0],
+      [600, 41.42, -3.70, 90, 0],   // salto de GPS
+      [900, 40.43, -3.70, 90, 0],
+      [1200, 40.44, -3.70, 90, 0],
+    ];
+    const traza = parseTrace(trazaGz(conSalto));
+    // 1,11195 km (R0-R1) + 1,11195 km (R3-R4) = 2,2239 -> 2,22, los mismos 2,22 que ya suma RECTA
+    // con solo dos tramos: el salto no aporta ni resta nada, como si no estuviera.
+    expect(tripSummary('s', traza!)).toEqual({ session: 's', km: 2.22, minutes: 20 });
+  });
+
+  it('puntos desordenados o con el mismo dtS no rompen tripSummary ni dan minutos negativos', () => {
+    const desordenado = [
+      [600, 40.42, -3.70, 90, 0],
+      [0, 40.40, -3.70, 90, 0],
+      [0, 40.40, -3.70, 90, 0],     // mismo dtS que el anterior: diferencia no positiva, tramo ignorado
+      [300, 40.41, -3.70, 90, 0],
+    ];
+    const traza = parseTrace(trazaGz(desordenado));
+    expect(() => tripSummary('s', traza!)).not.toThrow();
+    // Los tramos con dtS <= 0 (600->0 y 0->0) se ignoran; solo cuenta 0->300 (1,11195 km, 13,34 km/h).
+    // El total del trayecto (ultimo dtS menos el primero) es negativo y se recorta a 0, no a un numero negativo.
+    expect(tripSummary('s', traza!)).toEqual({ session: 's', km: 1.11, minutes: 0 });
+  });
+
   it('sessionOfPath saca el uuid del nombre del fichero y descarta lo que no lo sea', () => {
     expect(sessionOfPath('2026-09-10/6f1e5a8c-0000-4000-8000-000000000001.json.gz'))
       .toBe('6f1e5a8c-0000-4000-8000-000000000001');

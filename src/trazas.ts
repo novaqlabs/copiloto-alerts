@@ -48,16 +48,36 @@ export function sessionOfPath(path: string): string | undefined {
 }
 
 /**
+ * Techo de velocidad implicita entre dos puntos consecutivos (mismo orden de magnitud que el
+ * teleport guard del motor, fix round 1 de fase E): un tramo que lo supera es un salto de GPS, no
+ * metros reales conducidos. Se descarta ESE TRAMO, no el trayecto entero -un solo punto corrupto no
+ * debe tirar por la borda kilometros que si son reales y que el usuario luego reclama por puntos-.
+ */
+const TRIP_MAX_SEGMENT_KMH = 250;
+
+/**
  * Kilometros y minutos de un trayecto (spec §3.6). La distancia es la suma de los tramos entre
  * puntos consecutivos con la misma formula del motor (`haversineKm`), y los minutos salen del `dtS`
  * del ultimo punto menos el del primero. Los puntos son los del fichero YA RECORTADO por la app
  * (300 m por punta, decision E11 del plan): esto mide el trayecto anonimo, no el viaje real.
+ *
+ * Cada tramo se valida antes de sumarlo (fix round 1): un `dtS` no positivo (puntos desordenados o
+ * con el mismo instante) no da una velocidad fiable y se ignora, y un tramo cuya velocidad implicita
+ * supera `TRIP_MAX_SEGMENT_KMH` es un salto de GPS y tambien se ignora -en ambos casos SOLO ese
+ * tramo, el resto del trayecto se sigue sumando igual-.
  */
 export function tripSummary(session: string, trace: Trace): TraceKmRow | undefined {
   const points = trace.points;
   if (points.length < 2) return undefined;
   let km = 0;
-  for (let i = 1; i < points.length; i++) km += haversineKm(points[i - 1], points[i]);
+  for (let i = 1; i < points.length; i++) {
+    const dtS = points[i].dtS - points[i - 1].dtS;
+    if (dtS <= 0) continue;
+    const segmentKm = haversineKm(points[i - 1], points[i]);
+    const speedKmh = segmentKm / (dtS / 3600);
+    if (speedKmh > TRIP_MAX_SEGMENT_KMH) continue;
+    km += segmentKm;
+  }
   if (km < TRIP_MIN_KM) return undefined;
   const minutes = Math.max(0, Math.round((points[points.length - 1].dtS - points[0].dtS) / 60));
   return { session, km: Math.round(km * 100) / 100, minutes };
