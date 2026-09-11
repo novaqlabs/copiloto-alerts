@@ -1,6 +1,18 @@
 /** Solo se ejecuta en GitHub Actions con la clave secreta como secreto del repo. Nunca en la app. */
 export interface SupabaseEnv { url: string; secretKey: string }
 
+/**
+ * Un fallo HTTP de Storage con el status expuesto (ruling R65): `collectTraces` (Task 3) lo usa
+ * para distinguir un 404 real (carpeta `yyyy-mm-dd` que aun no existe, no es un fallo) de cualquier
+ * otro fallo (500, 403, red caida), que SI debe abortar la recogida de trazas de esta vuelta.
+ */
+export class StorageError extends Error {
+  constructor(message: string, readonly status: number) {
+    super(message);
+    this.name = 'StorageError';
+  }
+}
+
 const LIST_PAGE_SIZE = 1000;
 
 /**
@@ -49,7 +61,7 @@ async function listAll(env: SupabaseEnv, headers: Record<string, string>, prefix
       headers,
       body: JSON.stringify({ prefix, limit: pageSize, offset, sortBy: { column: 'name', order: 'asc' } }),
     });
-    if (!res.ok) throw new Error(`list traces (${prefix || 'raiz'}): HTTP ${res.status}`);
+    if (!res.ok) throw new StorageError(`list traces (${prefix || 'raiz'}): HTTP ${res.status}`, res.status);
     const page = await readJson<StorageObject[]>(res, `list traces (${prefix || 'raiz'})`);
     all.push(...page);
     if (page.length < pageSize) break;
@@ -72,7 +84,7 @@ export async function readObject(env: SupabaseEnv, path: string): Promise<Uint8A
   const res = await fetch(`${env.url}/storage/v1/object/traces/${path}`, {
     headers: { apikey: env.secretKey, Authorization: `Bearer ${env.secretKey}` },
   });
-  if (!res.ok) throw new Error(`read traces/${path}: HTTP ${res.status}`);
+  if (!res.ok) throw new StorageError(`read traces/${path}: HTTP ${res.status}`, res.status);
   return new Uint8Array(await res.arrayBuffer());
 }
 

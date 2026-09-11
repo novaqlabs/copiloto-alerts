@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { cleanupTraces, listObjects, readObject } from '../supabase.ts';
+import { cleanupTraces, listObjects, readObject, StorageError } from '../supabase.ts';
 
 const ENV = { url: 'https://example.supabase.co', secretKey: 'secret-key' };
 const NOW = new Date('2026-09-08T04:05:00Z'); // muy por delante de las carpetas de prueba (2020)
@@ -86,6 +86,20 @@ describe('listObjects y readObject (Task 3, fase D)', () => {
 
     expect(objetos.map((o) => o.name)).toEqual(['a.json.gz', 'b.json.gz']);
     expect(objetos[0].updated_at).toBe('2026-09-10T20:25:00Z');
+  });
+
+  it('listObjects lanza un StorageError con el status cuando el servidor falla (ruling R65)', async () => {
+    vi.stubGlobal('fetch', vi.fn(async () => ({ ok: false, status: 500 }) as unknown as Response));
+    await expect(listObjects(ENV, '2026-09-10')).rejects.toThrow(/HTTP 500/);
+
+    let caught: unknown;
+    try {
+      await listObjects(ENV, '2026-09-10');
+    } catch (err) {
+      caught = err;
+    }
+    expect(caught).toBeInstanceOf(StorageError);
+    expect((caught as StorageError).status).toBe(500);
   });
 
   it('readObject devuelve los bytes del objeto y lanza si el servidor falla', async () => {

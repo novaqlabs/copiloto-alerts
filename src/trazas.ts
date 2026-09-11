@@ -10,7 +10,7 @@
 import { gunzipSync } from 'node:zlib';
 import { levelOf, type TrafficSite } from './detectores.ts';
 import { EMA_ALPHA, hourlySlot, MIN_REFERENCE_SAMPLES, type Estado } from './estado.ts';
-import type { StorageObject } from './supabase.ts';
+import { StorageError, type StorageObject } from './supabase.ts';
 
 /** Ventana en vivo (spec §3.5): puntos y ficheros de los ultimos 20 minutos. */
 export const TRACE_WINDOW_MS = 20 * 60_000;
@@ -223,9 +223,14 @@ export async function collectTraces(input: {
     let objects: StorageObject[];
     try {
       objects = await list(folder);
-    } catch {
-      // Una carpeta que todavia no existe (justo despues de medianoche) no es un fallo.
-      continue;
+    } catch (err) {
+      // Un 404 real es una carpeta que todavia no existe (justo despues de medianoche): Supabase
+      // Storage devuelve 200 con [] para un prefijo inexistente, asi que un 404 solo puede venir de
+      // un endpoint caido, y eso NO es un fallo de la recogida (ruling R65). CUALQUIER OTRO fallo
+      // (500, 403, red) SI debe abortar `collectTraces`: lo captura el catch de cli.ts, que marca
+      // `sources.traces.ok = false` en vez de publicar en silencio 0 ficheros como si fuera normal.
+      if (err instanceof StorageError && err.status === 404) continue;
+      throw err;
     }
     for (const o of objects) {
       if (!o.name.endsWith(TRACE_SUFFIX)) continue;

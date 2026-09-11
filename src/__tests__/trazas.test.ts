@@ -1,6 +1,7 @@
 import { gzipSync } from 'node:zlib';
 import { describe, expect, it } from 'vitest';
 import { emptyEstado, type Estado } from '../estado.ts';
+import { StorageError } from '../supabase.ts';
 import {
   aggregateTraces,
   cellCenterOf,
@@ -172,15 +173,25 @@ describe('collectTraces', () => {
     });
   });
 
-  it('una carpeta que todavia no existe no rompe la vuelta', async () => {
+  it('una carpeta que todavia no existe (404) no rompe la vuelta', async () => {
     const res = await collectTraces({
       now: NOW,
       list: async (prefix) => {
-        if (prefix === '2026-09-09') throw new Error('HTTP 404');
+        if (prefix === '2026-09-09') throw new StorageError('list traces (2026-09-09): HTTP 404', 404);
         return [{ name: 'a.json.gz', updated_at: '2026-09-10T20:25:00Z' }];
       },
       read: async () => trazaGz(TRES_PUNTOS),
     });
     expect(res.files).toBe(1);
+  });
+
+  it('un fallo real del listado (500) SI rompe la vuelta: no se confunde con una carpeta inexistente', async () => {
+    await expect(collectTraces({
+      now: NOW,
+      list: async () => {
+        throw new StorageError('list traces (2026-09-10): HTTP 500', 500);
+      },
+      read: async () => trazaGz(TRES_PUNTOS),
+    })).rejects.toThrow(/HTTP 500/);
   });
 });
