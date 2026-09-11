@@ -7,10 +7,13 @@ import {
   cellCenterOf,
   collectTraces,
   parseTrace,
+  pendingTraceKm,
   sectorBearing,
   sectorOf,
+  sessionOfPath,
   traceCellKey,
   traceReferenceFor,
+  tripSummary,
   updateTraces,
   userSites,
 } from '../trazas.ts';
@@ -200,5 +203,67 @@ describe('collectTraces', () => {
       },
       read: async () => trazaGz(TRES_PUNTOS),
     })).rejects.toThrow(/HTTP 500/);
+  });
+});
+
+describe('kilometros y minutos por trayecto (fase E)', () => {
+  // Tres puntos en linea recta hacia el norte, 0,01 grados de latitud entre cada par: 1,11195 km
+  // por tramo (6371 km x 0,01 grados en radianes), 2,2239 km en total -> 2,22 redondeado.
+  const RECTA = [
+    [0, 40.40, -3.70, 90, 0],
+    [300, 40.41, -3.70, 90, 0],
+    [600, 40.42, -3.70, 90, 0],
+  ];
+
+  it('tripSummary suma la distancia entre puntos consecutivos y los minutos del ultimo dtS', () => {
+    const traza = parseTrace(trazaGz(RECTA));
+    expect(traza).toBeDefined();
+    expect(tripSummary('6f1e5a8c-0000-4000-8000-000000000001', traza!)).toEqual({
+      session: '6f1e5a8c-0000-4000-8000-000000000001',
+      km: 2.22,
+      minutes: 10,
+    });
+  });
+
+  it('un trayecto de menos de TRIP_MIN_KM o de un solo punto no se publica', () => {
+    const corto = parseTrace(trazaGz([[0, 40.40, -3.70, 5, 0], [60, 40.4005, -3.70, 5, 0]]));
+    expect(tripSummary('s', corto!)).toBeUndefined();      // 55 m
+    const suelto = parseTrace(trazaGz([[0, 40.40, -3.70, 5, 0]]));
+    expect(tripSummary('s', suelto!)).toBeUndefined();
+  });
+
+  it('sessionOfPath saca el uuid del nombre del fichero y descarta lo que no lo sea', () => {
+    expect(sessionOfPath('2026-09-10/6f1e5a8c-0000-4000-8000-000000000001.json.gz'))
+      .toBe('6f1e5a8c-0000-4000-8000-000000000001');
+    expect(sessionOfPath('2026-09-10/otra-cosa.json.gz')).toBeUndefined();
+    expect(sessionOfPath('2026-09-10/')).toBeUndefined();
+  });
+
+  it('collectTraces devuelve un trayecto por fichero, ademas de las celdas de trafico', async () => {
+    const sesion1 = '6f1e5a8c-0000-4000-8000-000000000001';
+    const sesion2 = '9a0c4b2d-0000-4000-8000-000000000002';
+    const objetos = [
+      { name: `${sesion1}.json.gz`, updated_at: NOW.toISOString() },
+      { name: `${sesion2}.json.gz`, updated_at: NOW.toISOString() },
+    ];
+    const { cells, files, trips } = await collectTraces({
+      list: async (prefix) => (prefix === '2026-09-10' ? objetos : []),
+      read: async () => trazaGz(RECTA, NOW.toISOString()),
+      now: NOW,
+    });
+    expect(files).toBe(2);
+    expect(trips.map((t) => t.session).sort()).toEqual([sesion1, sesion2].sort());
+    expect(trips.every((t) => t.km === 2.22 && t.minutes === 10)).toBe(true);
+    // La agregacion de trafico sigue funcionando igual con los mismos ficheros.
+    expect(cells.length).toBeGreaterThan(0);
+  });
+
+  it('un trayecto ya calculado no se vuelve a escribir', () => {
+    const yaCalculado = { session: '6f1e5a8c-0000-4000-8000-000000000001', km: 2.22, minutes: 10 };
+    const nuevo = { session: '9a0c4b2d-0000-4000-8000-000000000002', km: 5.5, minutes: 8 };
+
+    expect(pendingTraceKm([yaCalculado, nuevo], new Set([yaCalculado.session]))).toEqual([nuevo]);
+    expect(pendingTraceKm([yaCalculado], new Set([yaCalculado.session]))).toEqual([]);
+    expect(pendingTraceKm([yaCalculado, nuevo], new Set())).toEqual([yaCalculado, nuevo]);
   });
 });

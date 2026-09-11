@@ -8,7 +8,7 @@
  * (`TraceRecorder`, fase C) y lo que se publica es la media de una cuadricula, nunca un punto suelto.
  */
 import { gunzipSync } from 'node:zlib';
-import { levelOf, type TrafficSite } from './detectores.ts';
+import { haversineKm, levelOf, type TrafficSite } from './detectores.ts';
 import { EMA_ALPHA, hourlySlot, madridDay, MIN_REFERENCE_SAMPLES, type Estado } from './estado.ts';
 import { StorageError, type StorageObject } from './supabase.ts';
 
@@ -29,6 +29,49 @@ const SECTOR_DEG = 360 / TRACE_SECTORS;
 
 /** Sufijo de los objetos de trayecto en Storage (`TraceRecorder`, fase C). */
 const TRACE_SUFFIX = '.json.gz';
+
+/** Un trayecto mas corto que esto no se apunta en `trace_km`: no da ni para un decimal de km. */
+export const TRIP_MIN_KM = 0.2;
+
+/** Una fila de `trace_km` (fase E, spec §3.6): kilometros y minutos de UNA sesion, sin geometria. */
+export interface TraceKmRow {
+  session: string;
+  km: number;
+  minutes: number;
+}
+
+/** `<fecha>/<uuid>.json.gz` -> `<uuid>`; `undefined` si el nombre no es un UUID (fichero ajeno). */
+export function sessionOfPath(path: string): string | undefined {
+  const name = path.slice(path.lastIndexOf('/') + 1);
+  const session = name.endsWith(TRACE_SUFFIX) ? name.slice(0, -TRACE_SUFFIX.length) : '';
+  return /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(session) ? session : undefined;
+}
+
+/**
+ * Kilometros y minutos de un trayecto (spec §3.6). La distancia es la suma de los tramos entre
+ * puntos consecutivos con la misma formula del motor (`haversineKm`), y los minutos salen del `dtS`
+ * del ultimo punto menos el del primero. Los puntos son los del fichero YA RECORTADO por la app
+ * (300 m por punta, decision E11 del plan): esto mide el trayecto anonimo, no el viaje real.
+ */
+export function tripSummary(session: string, trace: Trace): TraceKmRow | undefined {
+  const points = trace.points;
+  if (points.length < 2) return undefined;
+  let km = 0;
+  for (let i = 1; i < points.length; i++) km += haversineKm(points[i - 1], points[i]);
+  if (km < TRIP_MIN_KM) return undefined;
+  const minutes = Math.max(0, Math.round((points[points.length - 1].dtS - points[0].dtS) / 60));
+  return { session, km: Math.round(km * 100) / 100, minutes };
+}
+
+/**
+ * Los trayectos que todavia NO estan en `trace_km` (spec §7: «un trayecto ya calculado no se
+ * recalcula»). Un mismo fichero se lista en varias vueltas seguidas -la ventana es de 20 minutos y
+ * el pipeline corre cada 10-, y su fila puede estar ya RECLAMADA por alguien: reescribirla seria
+ * pisar `claimed_by`.
+ */
+export function pendingTraceKm(trips: TraceKmRow[], existing: Set<string>): TraceKmRow[] {
+  return trips.filter((t) => !existing.has(t.session));
+}
 
 export interface TracePoint {
   dtS: number;
@@ -217,7 +260,7 @@ export async function collectTraces(input: {
   now: Date;
   windowMs?: number;
   maxFiles?: number;
-}): Promise<{ cells: AggregatedCell[]; files: number }> {
+}): Promise<{ cells: AggregatedCell[]; files: number; trips: TraceKmRow[] }> {
   const { list, read, now } = input;
   const windowMs = input.windowMs ?? TRACE_WINDOW_MS;
   const maxFiles = input.maxFiles ?? TRACE_MAX_FILES;
@@ -248,12 +291,24 @@ export async function collectTraces(input: {
   candidates.sort((a, b) => b.updated - a.updated);
 
   const files: { bytes: Uint8Array }[] = [];
+  const trips: TraceKmRow[] = [];
   for (const candidate of candidates.slice(0, maxFiles)) {
     try {
-      files.push({ bytes: await read(candidate.path) });
+      const bytes = await read(candidate.path);
+      files.push({ bytes });
+      // El mismo fichero sirve para dos cosas: el trafico en vivo (media por celda, `aggregateTraces`)
+      // y los kilometros de ESA sesion (`trace_km`, fase E). Se parsea aqui una vez mas para no
+      // cambiar la firma de `aggregateTraces`, que no sabe -ni debe saber- de que fichero viene cada
+      // punto: como mucho son TRACE_MAX_FILES (500) ficheros por vuelta.
+      const session = sessionOfPath(candidate.path);
+      if (session) {
+        const trace = parseTrace(bytes);
+        const trip = trace ? tripSummary(session, trace) : undefined;
+        if (trip) trips.push(trip);
+      }
     } catch {
       // Un objeto borrado entre el listado y la lectura: se salta y se sigue con el resto.
     }
   }
-  return { cells: aggregateTraces({ files, now, windowMs }), files: files.length };
+  return { cells: aggregateTraces({ files, now, windowMs }), files: files.length, trips };
 }

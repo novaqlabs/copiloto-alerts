@@ -175,7 +175,7 @@ const toRad = (deg: number): number => (deg * Math.PI) / 180;
 interface Point { lat: number; lng: number }
 
 /** Distancia de gran circulo en km (misma formula que `haversineKm` del motor). */
-function haversineKm(a: Point, b: Point): number {
+export function haversineKm(a: Point, b: Point): number {
   const dLat = toRad(b.lat - a.lat);
   const dLng = toRad(b.lng - a.lng);
   const h = Math.sin(dLat / 2) ** 2 + Math.cos(toRad(a.lat)) * Math.cos(toRad(b.lat)) * Math.sin(dLng / 2) ** 2;

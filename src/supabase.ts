@@ -112,3 +112,48 @@ export async function cleanupTraces(env: SupabaseEnv, now: Date, maxAgeDays = 30
   }
   return deleted;
 }
+
+/** Sesiones por lote al preguntar/escribir en `trace_km`: mantiene la URL del `in.(...)` corta. */
+const TRACE_KM_BATCH = 100;
+
+/**
+ * Sesiones de `sessions` que YA tienen fila en `trace_km` (fase E, spec §3.6): no hay que volver a
+ * calcularlas ni reescribirlas -una fila ya reclamada no se toca-. Pregunta por lotes de 100.
+ */
+export async function existingTraceKm(env: SupabaseEnv, sessions: string[]): Promise<Set<string>> {
+  const found = new Set<string>();
+  const headers = { apikey: env.secretKey, Authorization: `Bearer ${env.secretKey}` };
+  for (let i = 0; i < sessions.length; i += TRACE_KM_BATCH) {
+    const lote = sessions.slice(i, i + TRACE_KM_BATCH);
+    if (!lote.length) continue;
+    const res = await fetch(`${env.url}/rest/v1/trace_km?select=session&session=in.(${lote.join(',')})`, { headers });
+    if (!res.ok) throw new Error(`trace_km select: HTTP ${res.status} ${(await res.text()).slice(0, 200)}`);
+    const filas = await readJson<{ session: string }[]>(res, 'trace_km select');
+    for (const fila of filas) found.add(fila.session);
+  }
+  return found;
+}
+
+/**
+ * Apunta los kilometros de cada trayecto nuevo. `resolution=ignore-duplicates` es deliberado: si la
+ * sesion ya estaba (y puede estar ya RECLAMADA por alguien, con `claimed_by`), la fila no se toca.
+ * Devuelve cuantas filas se enviaron.
+ */
+export async function insertTraceKm(env: SupabaseEnv, rows: { session: string; km: number; minutes: number }[]): Promise<number> {
+  let enviadas = 0;
+  for (let i = 0; i < rows.length; i += TRACE_KM_BATCH) {
+    const lote = rows.slice(i, i + TRACE_KM_BATCH);
+    if (!lote.length) continue;
+    const res = await fetch(`${env.url}/rest/v1/trace_km?on_conflict=session`, {
+      method: 'POST',
+      headers: {
+        apikey: env.secretKey, Authorization: `Bearer ${env.secretKey}`, 'Content-Type': 'application/json',
+        Prefer: 'resolution=ignore-duplicates,return=minimal',
+      },
+      body: JSON.stringify(lote),
+    });
+    if (!res.ok) throw new Error(`trace_km insert: HTTP ${res.status} ${(await res.text()).slice(0, 200)}`);
+    enviadas += lote.length;
+  }
+  return enviadas;
+}

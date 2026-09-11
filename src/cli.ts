@@ -18,8 +18,8 @@ import { loadCatalogo, validateCatalogo } from './catalogo.ts';
 import { parseRadares, type Radar } from './radares.ts';
 import { parseIncidencias, type Incidencia } from './incidencias.ts';
 import { buildOutputs, writeOutputs, type SourceMeta, type SourcesMeta, type TracesSourceMeta } from './outputs.ts';
-import { cleanupTraces, listObjects, readObject, syncReportTypes, type SupabaseEnv } from './supabase.ts';
-import { collectTraces, updateTraces, userSites, type UserTrafficSite } from './trazas.ts';
+import { cleanupTraces, existingTraceKm, insertTraceKm, listObjects, readObject, syncReportTypes, type SupabaseEnv } from './supabase.ts';
+import { collectTraces, pendingTraceKm, updateTraces, userSites, type UserTrafficSite } from './trazas.ts';
 import { isDailyMaintenanceWindow } from './schedule.ts';
 import {
   bearingForDetectors,
@@ -252,7 +252,7 @@ async function run(): Promise<void> {
   let tracesMeta: TracesSourceMeta | undefined;
   if (!skipSupabase && env) {
     try {
-      const { cells, files } = await collectTraces({
+      const { cells, files, trips } = await collectTraces({
         list: (prefix) => listObjects(env, prefix),
         read: (path) => readObject(env, path),
         now,
@@ -260,8 +260,14 @@ async function run(): Promise<void> {
       updateTraces(estado, cells);
       usuarios = userSites(cells, estado);
       const points = cells.reduce((acc, c) => acc + c.points, 0);
+      // Kilometros por trayecto (fase E, spec §3.6): la app los reclama despues con `claim_km`.
+      // Se preguntan primero las que ya estan para no reescribir una fila que quiza ya esta
+      // reclamada -el `Prefer: resolution=ignore-duplicates` de `insertTraceKm` es la segunda red-.
+      const existentes = await existingTraceKm(env, trips.map((t) => t.session));
+      const nuevos = pendingTraceKm(trips, existentes);
+      const kmEscritos = nuevos.length ? await insertTraceKm(env, nuevos) : 0;
       tracesMeta = { fetchedAt: now.toISOString(), files, points, ok: true };
-      log(`trazas: ${files} ficheros, ${points} puntos, ${usuarios.length} celdas publicadas`);
+      log(`trazas: ${files} ficheros, ${points} puntos, ${usuarios.length} celdas publicadas, ${kmEscritos} trayectos con km nuevos`);
     } catch (e) {
       const error = e instanceof Error ? e.message : String(e);
       log(`trazas: fallo (${error})`);

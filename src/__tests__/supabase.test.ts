@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { cleanupTraces, listObjects, readObject, StorageError } from '../supabase.ts';
+import { cleanupTraces, existingTraceKm, insertTraceKm, listObjects, readObject, StorageError } from '../supabase.ts';
 
 const ENV = { url: 'https://example.supabase.co', secretKey: 'secret-key' };
 const NOW = new Date('2026-09-08T04:05:00Z'); // muy por delante de las carpetas de prueba (2020)
@@ -112,5 +112,45 @@ describe('listObjects y readObject (Task 3, fase D)', () => {
 
     vi.stubGlobal('fetch', vi.fn(async () => ({ ok: false, status: 404, arrayBuffer: async () => new ArrayBuffer(0) }) as unknown as Response));
     await expect(readObject(ENV, '2026-09-10/a.json.gz')).rejects.toThrow(/HTTP 404/);
+  });
+});
+
+describe('trace_km (fase E)', () => {
+  it('insertTraceKm hace un upsert que NUNCA pisa una fila ya existente', async () => {
+    const calls: { url: string; init: any }[] = [];
+    vi.stubGlobal('fetch', vi.fn(async (url: string, init: any) => {
+      calls.push({ url, init });
+      return rawResponse('', 201);
+    }));
+
+    const escritos = await insertTraceKm(ENV, [
+      { session: '6f1e5a8c-0000-4000-8000-000000000001', km: 12.5, minutes: 14 },
+      { session: '9a0c4b2d-0000-4000-8000-000000000002', km: 9.9, minutes: 11 },
+    ]);
+
+    expect(escritos).toBe(2);
+    expect(calls).toHaveLength(1);
+    expect(calls[0].url).toBe('https://example.supabase.co/rest/v1/trace_km?on_conflict=session');
+    expect(calls[0].init.headers.Prefer).toBe('resolution=ignore-duplicates,return=minimal');
+    expect(JSON.parse(calls[0].init.body)).toEqual([
+      { session: '6f1e5a8c-0000-4000-8000-000000000001', km: 12.5, minutes: 14 },
+      { session: '9a0c4b2d-0000-4000-8000-000000000002', km: 9.9, minutes: 11 },
+    ]);
+  });
+
+  it('existingTraceKm pregunta por lotes de 100 y devuelve las sesiones ya calculadas', async () => {
+    const urls: string[] = [];
+    vi.stubGlobal('fetch', vi.fn(async (url: string) => {
+      urls.push(url);
+      return jsonResponse(url.includes('sesion-000') ? [{ session: 'sesion-000' }] : []);
+    }));
+
+    const sesiones = Array.from({ length: 150 }, (_, i) => `sesion-${String(i).padStart(3, '0')}`);
+    const existentes = await existingTraceKm(ENV, sesiones);
+
+    expect(urls).toHaveLength(2);           // 150 sesiones -> dos lotes (100 + 50)
+    expect(existentes.has('sesion-000')).toBe(true);
+    expect(existentes.size).toBe(1);
+    expect(await existingTraceKm(ENV, [])).toEqual(new Set());
   });
 });
