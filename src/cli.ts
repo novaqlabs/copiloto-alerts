@@ -17,8 +17,9 @@ import { readFile } from 'node:fs/promises';
 import { loadCatalogo, validateCatalogo } from './catalogo.ts';
 import { parseRadares, type Radar } from './radares.ts';
 import { parseIncidencias, type Incidencia } from './incidencias.ts';
-import { buildOutputs, writeOutputs, type SourceMeta, type SourcesMeta } from './outputs.ts';
-import { cleanupTraces, syncReportTypes, type SupabaseEnv } from './supabase.ts';
+import { buildOutputs, writeOutputs, type SourceMeta, type SourcesMeta, type TracesSourceMeta } from './outputs.ts';
+import { cleanupTraces, listObjects, readObject, syncReportTypes, type SupabaseEnv } from './supabase.ts';
+import { collectTraces, updateTraces, userSites, type UserTrafficSite } from './trazas.ts';
 import { isDailyMaintenanceWindow } from './schedule.ts';
 import {
   bearingForDetectors,
@@ -237,12 +238,38 @@ async function run(): Promise<void> {
     medidasRes.meta.error = 'sin ubicaciones de detectores';
   }
 
+  const env = supabaseEnvFromProcess();
+
+  // Telemetria propia (spec §3.5): solo con la clave secreta en el entorno y sin --skip-supabase.
+  // Un fallo aqui NUNCA aborta la vuelta: se anota en meta.sources.traces y se publica el resto.
+  let usuarios: UserTrafficSite[] = [];
+  let tracesMeta: TracesSourceMeta | undefined;
+  if (!skipSupabase && env) {
+    try {
+      const { cells, files } = await collectTraces({
+        list: (prefix) => listObjects(env, prefix),
+        read: (path) => readObject(env, path),
+        now,
+      });
+      updateTraces(estado, cells);
+      usuarios = userSites(cells, estado);
+      const points = cells.reduce((acc, c) => acc + c.points, 0);
+      tracesMeta = { fetchedAt: now.toISOString(), files, points, ok: true };
+      log(`trazas: ${files} ficheros, ${points} puntos, ${usuarios.length} celdas publicadas`);
+    } catch (e) {
+      const error = e instanceof Error ? e.message : String(e);
+      log(`trazas: fallo (${error})`);
+      tracesMeta = { fetchedAt: now.toISOString(), files: 0, points: 0, ok: false, error };
+    }
+  }
+
   const sources: SourcesMeta = {
     radares: radaresRes.meta,
     incidencias: incidenciasRes.meta,
     trafico: { ...medidasRes.meta, withSpeed: traficoWithSpeed },
+    ...(tracesMeta ? { traces: tracesMeta } : {}),
   };
-  const out = buildOutputs({ radares, incidencias, catalogo, now, sources, discardedIncidencias, trafico, historico, estado });
+  const out = buildOutputs({ radares, incidencias, catalogo, now, sources, discardedIncidencias, trafico, historico, usuarios, estado });
   const bytes = await writeOutputs(outDir, out);
   log(`escritos ${out.size} ficheros (${(bytes / 1000).toFixed(0)} KB) en ${outDir}`);
 
@@ -250,7 +277,6 @@ async function run(): Promise<void> {
     log('supabase: --skip-supabase, se omite sincronizacion');
     return;
   }
-  const env = supabaseEnvFromProcess();
   if (!env) {
     log('supabase: faltan SUPABASE_URL/SUPABASE_SECRET_KEY en el entorno, se omite sincronizacion');
     return;

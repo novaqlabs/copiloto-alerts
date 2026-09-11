@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { cleanupTraces } from '../supabase.ts';
+import { cleanupTraces, listObjects, readObject } from '../supabase.ts';
 
 const ENV = { url: 'https://example.supabase.co', secretKey: 'secret-key' };
 const NOW = new Date('2026-09-08T04:05:00Z'); // muy por delante de las carpetas de prueba (2020)
@@ -68,5 +68,35 @@ describe('cleanupTraces — 200 con cuerpo invalido (M11)', () => {
   it('un 200 con cuerpo no JSON en el listado se trata como fallo', async () => {
     vi.stubGlobal('fetch', vi.fn(async () => rawResponse('<html>Service Unavailable</html>')));
     await expect(cleanupTraces(ENV, NOW)).rejects.toThrow(/cuerpo no JSON/);
+  });
+});
+
+describe('listObjects y readObject (Task 3, fase D)', () => {
+  it('listObjects pagina igual que cleanupTraces y devuelve updated_at', async () => {
+    const fetchMock = vi.fn(async (url: string, init: any) => {
+      const body = JSON.parse(init.body);
+      expect(url).toBe(`${ENV.url}/storage/v1/object/list/traces`);
+      expect(body.prefix).toBe('2026-09-10');
+      if (body.offset === 0) return jsonResponse([{ name: 'a.json.gz', updated_at: '2026-09-10T20:25:00Z' }, { name: 'b.json.gz', updated_at: '2026-09-10T20:24:00Z' }]);
+      return jsonResponse([]);
+    });
+    vi.stubGlobal('fetch', fetchMock);
+
+    const objetos = await listObjects(ENV, '2026-09-10', 2);
+
+    expect(objetos.map((o) => o.name)).toEqual(['a.json.gz', 'b.json.gz']);
+    expect(objetos[0].updated_at).toBe('2026-09-10T20:25:00Z');
+  });
+
+  it('readObject devuelve los bytes del objeto y lanza si el servidor falla', async () => {
+    const bytes = new Uint8Array([31, 139, 8, 0]);
+    vi.stubGlobal('fetch', vi.fn(async (url: string) => {
+      expect(url).toBe(`${ENV.url}/storage/v1/object/traces/2026-09-10/a.json.gz`);
+      return { ok: true, status: 200, arrayBuffer: async () => bytes.buffer } as unknown as Response;
+    }));
+    expect(await readObject(ENV, '2026-09-10/a.json.gz')).toEqual(bytes);
+
+    vi.stubGlobal('fetch', vi.fn(async () => ({ ok: false, status: 404, arrayBuffer: async () => new ArrayBuffer(0) }) as unknown as Response));
+    await expect(readObject(ENV, '2026-09-10/a.json.gz')).rejects.toThrow(/HTTP 404/);
   });
 });

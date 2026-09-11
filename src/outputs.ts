@@ -7,6 +7,7 @@ import type { Incidencia } from './incidencias.ts';
 import type { Catalogo } from './catalogo.ts';
 import type { TrafficSite } from './detectores.ts';
 import type { TrafficHistorySite } from './estado.ts';
+import type { UserTrafficSite } from './trazas.ts';
 
 export const CONTRACT_VERSION = 1;
 
@@ -59,6 +60,8 @@ export interface BuildOutputsInput {
   trafico?: TrafficSite[];
   /** Perfiles horarios maduros (Task 2); vacio mientras ningun detector llegue a 20 muestras. */
   historico?: TrafficHistorySite[];
+  /** Celdas de 100 m agregadas de los trayectos propios (Task 3); vacio sin Supabase configurado. */
+  usuarios?: UserTrafficSite[];
   /** Estado acumulado (Task 2). Se publica tal cual en `trafico/estado.json`; la app no lo lee. */
   estado?: unknown;
 }
@@ -98,6 +101,9 @@ export function buildOutputs(input: BuildOutputsInput): OutputMap {
 
   const historicoGroups = groupByCell(input.historico ?? []);
   for (const [cell, items] of historicoGroups.byCell) out.set(`trafico/historico/${cell}.json`, items);
+
+  const usuariosGroups = groupByCell(input.usuarios ?? []);
+  for (const [cell, items] of usuariosGroups.byCell) out.set(`trafico/usuarios/${cell}.json`, items);
   if (input.estado !== undefined) out.set('trafico/estado.json', input.estado);
 
   const meta: MetaJson = {
@@ -109,8 +115,7 @@ export function buildOutputs(input: BuildOutputsInput): OutputMap {
       incidencias: [...incGroups.byCell.keys()].sort(),
       trafico: [...traficoGroups.byCell.keys()].sort(),
       historico: [...historicoGroups.byCell.keys()].sort(),
-      // La rellena la Task 3.
-      usuarios: [],
+      usuarios: [...usuariosGroups.byCell.keys()].sort(),
     },
     discarded: { outOfCoverage: radarGroups.outOfCoverage + incGroups.outOfCoverage + traficoGroups.outOfCoverage, byType: discardedIncidencias ?? {} },
   };

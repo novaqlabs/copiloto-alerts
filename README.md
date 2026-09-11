@@ -17,6 +17,15 @@ los precios de carburantes.
   móvil, precio distinto...), con el texto que dice el asistente de voz, el color/icono del
   mapa y cuánto dura cada aviso antes de caducar (`ttlMin`) o de que otro usuario lo pueda
   refrescar (`extendMin`).
+- **Tráfico en vivo** (`src/detectores.ts`): los 5.518 detectores de la DGT con medida reciente,
+  fusionados por punto y sentido, con la velocidad, el nivel (`free`/`slow`/`jam`), el `ratio`
+  contra la velocidad de referencia de esa vía y el rumbo de circulación calculado a partir del PK.
+- **Histórico de tráfico** (`src/estado.ts`): perfil de 168 franjas (hora de la semana en hora de
+  Madrid) por detector, acumulado con una media móvil exponencial; solo se publican los detectores
+  con 20 muestras o más en alguna franja.
+- **Tráfico de los propios usuarios** (`src/trazas.ts`): los trayectos anónimos que la app sube a
+  Supabase Storage, agregados en cuadrículas de 100 m y ocho sectores de rumbo. Nunca se publica un
+  punto suelto ni nada que identifique a nadie: solo la media y el recuento de cada cuadrícula.
 
 Las capas se recortan en **celdas de un grado** (`src/cells.ts`, `cellOf`) sobre la caja que
 cubre España peninsular, Baleares, Canarias y el entorno próximo (`CELL_BOUNDS`), para que
@@ -36,10 +45,14 @@ Publicados en la raíz del sitio de GitHub Pages:
 
 | Fichero | Contenido |
 | --- | --- |
-| `meta.json` | `{ contractVersion, generatedAt, sources, cells: { radares: string[], incidencias: string[] }, discarded: { outOfCoverage, byType } }`. `cells.*` solo lista las celdas que tienen contenido; `sources.<radares\|incidencias>` es `{ fetchedAt, records, ok, error? }` por cada fuente de la última ejecución; `discarded.byType` cuenta las incidencias descartadas por motivo (incluye los `xsi:type` desconocidos del DATEX II de la DGT, y motivos como `sin_coordenadas` o `terminada`). |
+| `meta.json` | `{ contractVersion, generatedAt, sources, cells: { radares, incidencias, trafico, historico, usuarios }, discarded: { outOfCoverage, byType } }`. `cells.*` solo lista las celdas que tienen contenido; `sources.<radares\|incidencias>` es `{ fetchedAt, records, ok, error? }`, `sources.trafico` añade `withSpeed` y `sources.traces` es `{ fetchedAt, files, points, ok, error? }`. `discarded.byType` cuenta las incidencias descartadas por motivo. `contractVersion` sigue siendo **1**: la fase D solo AÑADE claves, y subirla dejaría sin capa de alertas a las versiones ya instaladas de la app. |
 | `catalogo.json` | Copia tal cual de `catalogo.json` (raíz de este repo): catálogo de tipos de alerta. |
 | `radares/<celda>.json` | Array de `Radar` (ver `src/radares.ts`) cuyo punto de inicio cae en esa celda de un grado (`${floor(lat)}_${floor(lng)}`), ordenado por `id`. Solo existen ficheros para celdas con contenido. |
 | `incidencias/<celda>.json` | Array de `Incidencia` (ver `src/incidencias.ts`), mismo criterio de celda y orden. |
+| `trafico/<celda>.json` | Array de `TrafficSite` (ver `src/detectores.ts`): `{ id, lat, lng, road, bearing, speedKmh, level, ratio, measuredAt }`, misma celda de un grado y mismo orden por `id`. |
+| `trafico/historico/<celda>.json` | Array de `TrafficHistorySite` (ver `src/estado.ts`): `{ id, lat, lng, road, bearing, profile }` con 168 posiciones (`number \| null`), franja 0 = lunes 00:00 en hora de Madrid. |
+| `trafico/usuarios/<celda>.json` | Array de `UserTrafficSite` (ver `src/trazas.ts`): igual que `trafico/<celda>.json` más `points`, con `id = "u:<celda100>_<sector>"`. |
+| `trafico/estado.json` | Estado interno acumulado (`src/estado.ts`): referencia por detector, perfil horario, perfil de las cuadrículas de usuarios y ubicaciones cacheadas. La app **no** lo lee; lo recupera la vuelta siguiente con `--prev-estado`. |
 
 Lo que cae fuera de `CELL_BOUNDS` (España peninsular, Baleares, Canarias y entorno próximo) se
 descarta y se cuenta en `meta.json#discarded.outOfCoverage`.
@@ -95,6 +108,10 @@ descarga las dos fuentes de la DGT, genera las salidas y las publica en GitHub P
 `--prev-meta` con la URL del propio `meta.json` publicado para poder conservar el `fetchedAt`
 anterior si una fuente falla. `.github/workflows/keepalive.yml` hace un commit trivial semanal
 para que GitHub no desactive el cron tras 60 días de inactividad en el repo.
+
+El workflow descarga además `trafico/estado.json` del Pages anterior (`PREV_ESTADO`) y lo pasa con
+`--prev-estado`: es el acumulado de referencias y perfiles horarios. Si falta (primera ejecución) o
+la descarga falla, se parte de cero y el estado se reconstruye solo en unos días.
 
 Secreto necesario en el repositorio de GitHub: `SUPABASE_SECRET_KEY`.
 

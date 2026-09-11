@@ -35,8 +35,14 @@ export async function syncReportTypes(catalogo: { types: { key: string; enabled:
  * cada llamada a como mucho `pageSize` filas, asi que sin paginar solo se ven los primeros
  * `pageSize`.
  */
-async function listAll(env: SupabaseEnv, headers: Record<string, string>, prefix: string, pageSize: number): Promise<{ name: string }[]> {
-  const all: { name: string }[] = [];
+/** Un objeto de Storage tal como lo devuelve `POST /storage/v1/object/list/<bucket>`. */
+export interface StorageObject {
+  name: string;
+  updated_at?: string;
+}
+
+async function listAll(env: SupabaseEnv, headers: Record<string, string>, prefix: string, pageSize: number): Promise<StorageObject[]> {
+  const all: StorageObject[] = [];
   for (let offset = 0; ; offset += pageSize) {
     const res = await fetch(`${env.url}/storage/v1/object/list/traces`, {
       method: 'POST',
@@ -44,11 +50,30 @@ async function listAll(env: SupabaseEnv, headers: Record<string, string>, prefix
       body: JSON.stringify({ prefix, limit: pageSize, offset, sortBy: { column: 'name', order: 'asc' } }),
     });
     if (!res.ok) throw new Error(`list traces (${prefix || 'raiz'}): HTTP ${res.status}`);
-    const page = await readJson<{ name: string }[]>(res, `list traces (${prefix || 'raiz'})`);
+    const page = await readJson<StorageObject[]>(res, `list traces (${prefix || 'raiz'})`);
     all.push(...page);
     if (page.length < pageSize) break;
   }
   return all;
+}
+
+/**
+ * Listado publico de los objetos de `traces` bajo `prefix` (Task 3, spec §3.5): mismo paginado que
+ * usa `cleanupTraces`, expuesto para la agregacion de telemetria. Sigue usando la CLAVE SECRETA, asi
+ * que solo se llama desde GitHub Actions, nunca desde la app.
+ */
+export async function listObjects(env: SupabaseEnv, prefix: string, pageSize = LIST_PAGE_SIZE): Promise<StorageObject[]> {
+  const headers = { apikey: env.secretKey, Authorization: `Bearer ${env.secretKey}`, 'Content-Type': 'application/json' };
+  return listAll(env, headers, prefix, pageSize);
+}
+
+/** Descarga el contenido de `traces/<path>` tal cual (gzip). Lanza si la respuesta no es 2xx. */
+export async function readObject(env: SupabaseEnv, path: string): Promise<Uint8Array> {
+  const res = await fetch(`${env.url}/storage/v1/object/traces/${path}`, {
+    headers: { apikey: env.secretKey, Authorization: `Bearer ${env.secretKey}` },
+  });
+  if (!res.ok) throw new Error(`read traces/${path}: HTTP ${res.status}`);
+  return new Uint8Array(await res.arrayBuffer());
 }
 
 export async function cleanupTraces(env: SupabaseEnv, now: Date, maxAgeDays = 30, pageSize = LIST_PAGE_SIZE): Promise<number> {
