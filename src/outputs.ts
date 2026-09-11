@@ -6,6 +6,7 @@ import type { Radar } from './radares.ts';
 import type { Incidencia } from './incidencias.ts';
 import type { Catalogo } from './catalogo.ts';
 import type { TrafficSite } from './detectores.ts';
+import type { TrafficHistorySite } from './estado.ts';
 
 export const CONTRACT_VERSION = 1;
 
@@ -56,6 +57,10 @@ export interface BuildOutputsInput {
   discardedIncidencias?: Record<string, number>;
   /** Sitios de trafico en vivo (Task 1); vacio si el feed de detectores fallo. */
   trafico?: TrafficSite[];
+  /** Perfiles horarios maduros (Task 2); vacio mientras ningun detector llegue a 20 muestras. */
+  historico?: TrafficHistorySite[];
+  /** Estado acumulado (Task 2). Se publica tal cual en `trafico/estado.json`; la app no lo lee. */
+  estado?: unknown;
 }
 
 export type OutputMap = Map<string, unknown>;
@@ -91,6 +96,10 @@ export function buildOutputs(input: BuildOutputsInput): OutputMap {
   const traficoGroups = groupByCell(input.trafico ?? []);
   for (const [cell, items] of traficoGroups.byCell) out.set(`trafico/${cell}.json`, items);
 
+  const historicoGroups = groupByCell(input.historico ?? []);
+  for (const [cell, items] of historicoGroups.byCell) out.set(`trafico/historico/${cell}.json`, items);
+  if (input.estado !== undefined) out.set('trafico/estado.json', input.estado);
+
   const meta: MetaJson = {
     contractVersion: CONTRACT_VERSION,
     generatedAt: now.toISOString(),
@@ -99,8 +108,8 @@ export function buildOutputs(input: BuildOutputsInput): OutputMap {
       radares: [...radarGroups.byCell.keys()].sort(),
       incidencias: [...incGroups.byCell.keys()].sort(),
       trafico: [...traficoGroups.byCell.keys()].sort(),
-      // Las rellenan la Task 2 (historico) y la Task 3 (usuarios).
-      historico: [],
+      historico: [...historicoGroups.byCell.keys()].sort(),
+      // La rellena la Task 3.
       usuarios: [],
     },
     discarded: { outOfCoverage: radarGroups.outOfCoverage + incGroups.outOfCoverage + traficoGroups.outOfCoverage, byType: discardedIncidencias ?? {} },

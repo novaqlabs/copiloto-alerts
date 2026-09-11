@@ -3,7 +3,7 @@
  *
  *   node src/cli.ts run --out <dir> [--skip-supabase] [--radares <url|fichero>] [--incidencias <url|fichero>]
  *                       [--detectores-medidas <url|fichero>] [--detectores-ubicaciones <url|fichero>]
- *                       [--prev-meta <url|fichero>]
+ *                       [--prev-meta <url|fichero>] [--prev-estado <url|fichero>]
  *
  * Variables de entorno (solo se leen en GitHub Actions; nunca hardcodeadas):
  *   SUPABASE_URL, SUPABASE_SECRET_KEY
@@ -28,6 +28,18 @@ import {
   publicationTimeOf,
   type TrafficSite,
 } from './detectores.ts';
+import {
+  bearingsFromEstado,
+  emptyEstado,
+  historicoSites,
+  locationsAreStale,
+  locationsFromEstado,
+  parseEstado,
+  referenceFor,
+  updateEstado,
+  type Estado,
+  type TrafficHistorySite,
+} from './estado.ts';
 
 const DEFAULT_RADARES_URL = 'http://infocar.dgt.es/datex2/dgt/PredefinedLocationsPublication/radares/content.xml';
 const DEFAULT_INCIDENCIAS_URL = 'https://nap.dgt.es/datex2/v3/dgt/SituationPublication/datex2_v37.xml';
@@ -85,6 +97,27 @@ async function loadPrevMeta(source: string | undefined): Promise<PrevMeta | unde
   }
 }
 
+/**
+ * Estado acumulado de la vuelta anterior (`trafico/estado.json` del Pages publicado, decision D12).
+ * Cualquier fallo -no existe todavia, la CDN devuelve 404, el JSON esta truncado- se traga aqui y
+ * se parte de cero: el estado se reconstruye solo en unos dias.
+ */
+async function loadPrevEstado(source: string | undefined, now: Date): Promise<Estado> {
+  if (!source) return emptyEstado(now);
+  try {
+    const text = existsSync(source) ? await readFile(source, 'utf8') : await fetchOnce(source);
+    const estado = parseEstado(text);
+    if (!estado) {
+      log('prev-estado: contenido no valido o de otra version, se parte de cero');
+      return emptyEstado(now);
+    }
+    return estado;
+  } catch (e) {
+    log(`prev-estado: no se pudo leer (${e instanceof Error ? e.message : e}), se parte de cero`);
+    return emptyEstado(now);
+  }
+}
+
 async function loadSource(
   name: 'radares' | 'incidencias' | 'trafico',
   source: string,
@@ -115,6 +148,7 @@ async function run(): Promise<void> {
   const medidasSource = arg('detectores-medidas', DEFAULT_DETECTORES_MEDIDAS_URL)!;
   const ubicacionesSource = arg('detectores-ubicaciones', DEFAULT_DETECTORES_UBICACIONES_URL)!;
   const prevMetaSource = arg('prev-meta');
+  const prevEstadoSource = arg('prev-estado');
   const skipSupabase = has('skip-supabase');
   const now = new Date();
 
@@ -134,13 +168,18 @@ async function run(): Promise<void> {
     loadSource('trafico', medidasSource, now, prevMeta),
   ]);
 
-  // Las ubicaciones (18,8 MB) van aparte: un fallo suyo no invalida radares ni incidencias, solo
-  // deja la capa de trafico sin publicar en esta vuelta (la Task 2 las cachea 24 h en el estado).
+  const estado = await loadPrevEstado(prevEstadoSource, now);
+  // Las ubicaciones (18,8 MB) solo se descargan una vez al dia (spec §3.2): el resto de vueltas
+  // salen del estado. Un fallo de descarga tampoco es fatal: se sigue con las cacheadas.
   let ubicacionesText: string | undefined;
-  try {
-    ubicacionesText = await readSource(ubicacionesSource);
-  } catch (e) {
-    log(`detectores: fallo al leer las ubicaciones (${e instanceof Error ? e.message : e})`);
+  if (locationsAreStale(estado, now)) {
+    try {
+      ubicacionesText = await readSource(ubicacionesSource);
+    } catch (e) {
+      log(`detectores: fallo al leer las ubicaciones (${e instanceof Error ? e.message : e})`);
+    }
+  } else {
+    log(`detectores: ubicaciones cacheadas del ${estado.locationsAt}, no se vuelven a descargar`);
   }
 
   if (!radaresRes.text && !incidenciasRes.text) {
@@ -168,16 +207,31 @@ async function run(): Promise<void> {
 
   let trafico: TrafficSite[] = [];
   let traficoWithSpeed = 0;
-  if (medidasRes.text && ubicacionesText) {
-    const locations = parseDetectorLocations(ubicacionesText);
+  let historico: TrafficHistorySite[] = [];
+  const locations = ubicacionesText ? parseDetectorLocations(ubicacionesText) : locationsFromEstado(estado);
+  const bearings = ubicacionesText ? bearingForDetectors(locations) : bearingsFromEstado(estado);
+  if (medidasRes.text && locations.length > 0) {
     const measurements = parseDetectorMeasurements(medidasRes.text);
     const publishedRaw = publicationTimeOf(medidasRes.text);
     const publishedMs = publishedRaw ? Date.parse(publishedRaw) : Number.NaN;
     const publishedAt = Number.isFinite(publishedMs) ? new Date(publishedMs) : now;
-    trafico = buildTrafficSites({ locations, measurements, publishedAt, bearings: bearingForDetectors(locations) });
+    trafico = buildTrafficSites({
+      locations,
+      measurements,
+      publishedAt,
+      bearings,
+      referenceKmh: (loc) => referenceFor(estado.detectors[loc.id]),
+    });
     traficoWithSpeed = trafico.filter((s) => s.speedKmh !== null).length;
     medidasRes.meta.records = trafico.length;
-    log(`detectores: ${locations.length} ubicaciones, ${measurements.length} medidas, ${trafico.length} sitios (${traficoWithSpeed} con velocidad)`);
+    updateEstado({
+      estado,
+      sites: trafico,
+      now,
+      ...(ubicacionesText ? { locations, bearings } : {}),
+    });
+    historico = historicoSites(estado);
+    log(`detectores: ${locations.length} ubicaciones, ${measurements.length} medidas, ${trafico.length} sitios (${traficoWithSpeed} con velocidad), ${historico.length} con historico`);
   } else if (medidasRes.text) {
     medidasRes.meta.ok = false;
     medidasRes.meta.error = 'sin ubicaciones de detectores';
@@ -188,7 +242,7 @@ async function run(): Promise<void> {
     incidencias: incidenciasRes.meta,
     trafico: { ...medidasRes.meta, withSpeed: traficoWithSpeed },
   };
-  const out = buildOutputs({ radares, incidencias, catalogo, now, sources, discardedIncidencias, trafico });
+  const out = buildOutputs({ radares, incidencias, catalogo, now, sources, discardedIncidencias, trafico, historico, estado });
   const bytes = await writeOutputs(outDir, out);
   log(`escritos ${out.size} ficheros (${(bytes / 1000).toFixed(0)} KB) en ${outDir}`);
 

@@ -59,4 +59,20 @@ describe('buildOutputs', () => {
     expect(meta3.sources.trafico).toEqual({ fetchedAt: NOW.toISOString(), records: 1, withSpeed: 1, ok: true });
     expect(meta3.contractVersion).toBe(1);
   });
+  it('publica el historico por celda y el estado tal cual', () => {
+    const perfil = { id: 'GUID_DET_138003', lat: 40.462196, lng: -3.77084, road: 'A-6', bearing: 300, profile: new Array(168).fill(null) };
+    const estado = { version: 1, updatedAt: NOW.toISOString(), locationsAt: null, decayedOn: null, detectors: {}, traces: {} };
+    const out4 = buildOutputs({
+      radares: [], incidencias: [], catalogo: loadCatalogo(), now: NOW,
+      sources: {
+        radares: { fetchedAt: NOW.toISOString(), records: 0, ok: true },
+        incidencias: { fetchedAt: NOW.toISOString(), records: 0, ok: true },
+      },
+      historico: [perfil],
+      estado,
+    });
+    expect(out4.get('trafico/historico/40_-4.json')).toEqual([perfil]);
+    expect(out4.get('trafico/estado.json')).toBe(estado);
+    expect((out4.get('meta.json') as any).cells.historico).toEqual(['40_-4']);
+  });
 });
