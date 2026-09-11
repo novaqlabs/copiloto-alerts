@@ -18,7 +18,7 @@ describe('buildOutputs', () => {
     const meta = out.get('meta.json') as any;
     expect(meta.contractVersion).toBe(1);
     expect(meta.generatedAt).toBe(NOW.toISOString());
-    expect(meta.cells).toEqual({ radares: ['40_-4'], incidencias: ['41_-1'] });
+    expect(meta.cells).toEqual({ radares: ['40_-4'], incidencias: ['41_-1'], trafico: [], historico: [], usuarios: [] });
     expect(meta.sources.radares.records).toBe(1);
   });
   it('incluye el catalogo tal cual', () => {
@@ -38,5 +38,25 @@ describe('buildOutputs', () => {
   });
   it('discarded.byType es un objeto vacio cuando no se pasan descartes de incidencias', () => {
     expect((out.get('meta.json') as any).discarded.byType).toEqual({});
+  });
+  it('reparte los sitios de trafico por celda y los lista en meta.cells.trafico', () => {
+    const sitio = {
+      id: 'GUID_DET_138003', lat: 40.462196, lng: -3.77084, road: 'A-6', bearing: 300,
+      speedKmh: 102, level: 'free' as const, ratio: 0.93, measuredAt: '2026-09-10T22:25:00+02:00',
+    };
+    const out3 = buildOutputs({
+      radares: [], incidencias: [], catalogo: loadCatalogo(), now: NOW,
+      sources: {
+        radares: { fetchedAt: NOW.toISOString(), records: 0, ok: true },
+        incidencias: { fetchedAt: NOW.toISOString(), records: 0, ok: true },
+        trafico: { fetchedAt: NOW.toISOString(), records: 1, withSpeed: 1, ok: true },
+      },
+      trafico: [sitio],
+    });
+    expect(out3.get('trafico/40_-4.json')).toEqual([sitio]);
+    const meta3 = out3.get('meta.json') as any;
+    expect(meta3.cells.trafico).toEqual(['40_-4']);
+    expect(meta3.sources.trafico).toEqual({ fetchedAt: NOW.toISOString(), records: 1, withSpeed: 1, ok: true });
+    expect(meta3.contractVersion).toBe(1);
   });
 });

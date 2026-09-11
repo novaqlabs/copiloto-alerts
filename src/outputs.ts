@@ -5,6 +5,7 @@ import { cellOf, inCoverage } from './cells.ts';
 import type { Radar } from './radares.ts';
 import type { Incidencia } from './incidencias.ts';
 import type { Catalogo } from './catalogo.ts';
+import type { TrafficSite } from './detectores.ts';
 
 export const CONTRACT_VERSION = 1;
 
@@ -15,16 +16,32 @@ export interface SourceMeta {
   error?: string;
 }
 
+/** `sources.trafico` (spec §3.4): `records` son los sitios publicados y `withSpeed` los que traen velocidad. */
+export interface TraficoSourceMeta extends SourceMeta {
+  withSpeed: number;
+}
+
+/** `sources.traces` (spec §3.4, Task 3): ficheros de trayecto leidos y puntos agregados. */
+export interface TracesSourceMeta {
+  fetchedAt: string;
+  files: number;
+  points: number;
+  ok: boolean;
+  error?: string;
+}
+
 export interface SourcesMeta {
   radares: SourceMeta;
   incidencias: SourceMeta;
+  trafico?: TraficoSourceMeta;
+  traces?: TracesSourceMeta;
 }
 
 export interface MetaJson {
   contractVersion: number;
   generatedAt: string;
   sources: SourcesMeta;
-  cells: { radares: string[]; incidencias: string[] };
+  cells: { radares: string[]; incidencias: string[]; trafico: string[]; historico: string[]; usuarios: string[] };
   discarded: { outOfCoverage: number; byType: Record<string, number> };
 }
 
@@ -37,6 +54,8 @@ export interface BuildOutputsInput {
   /** Descartes de `parseIncidencias` por motivo (incluye los xsi:type desconocidos, spec §4); se
    * publican tal cual en `meta.json#discarded.byType`. Vacio si no se pasa. */
   discardedIncidencias?: Record<string, number>;
+  /** Sitios de trafico en vivo (Task 1); vacio si el feed de detectores fallo. */
+  trafico?: TrafficSite[];
 }
 
 export type OutputMap = Map<string, unknown>;
@@ -69,6 +88,9 @@ export function buildOutputs(input: BuildOutputsInput): OutputMap {
   for (const [cell, items] of radarGroups.byCell) out.set(`radares/${cell}.json`, items);
   for (const [cell, items] of incGroups.byCell) out.set(`incidencias/${cell}.json`, items);
 
+  const traficoGroups = groupByCell(input.trafico ?? []);
+  for (const [cell, items] of traficoGroups.byCell) out.set(`trafico/${cell}.json`, items);
+
   const meta: MetaJson = {
     contractVersion: CONTRACT_VERSION,
     generatedAt: now.toISOString(),
@@ -76,8 +98,12 @@ export function buildOutputs(input: BuildOutputsInput): OutputMap {
     cells: {
       radares: [...radarGroups.byCell.keys()].sort(),
       incidencias: [...incGroups.byCell.keys()].sort(),
+      trafico: [...traficoGroups.byCell.keys()].sort(),
+      // Las rellenan la Task 2 (historico) y la Task 3 (usuarios).
+      historico: [],
+      usuarios: [],
     },
-    discarded: { outOfCoverage: radarGroups.outOfCoverage + incGroups.outOfCoverage, byType: discardedIncidencias ?? {} },
+    discarded: { outOfCoverage: radarGroups.outOfCoverage + incGroups.outOfCoverage + traficoGroups.outOfCoverage, byType: discardedIncidencias ?? {} },
   };
   out.set('meta.json', meta);
   out.set('catalogo.json', catalogo);
@@ -97,7 +123,7 @@ export async function writeOutputs(dir: string, out: OutputMap): Promise<number>
   await writeFile(join(dir, '.nojekyll'), '');
   await writeFile(
     join(dir, 'index.html'),
-    '<!doctype html><meta charset="utf-8"><title>Copiloto alerts</title><p>Alertas oficiales de la DGT (radares e incidencias) para Copiloto. Ver <a href="meta.json">meta.json</a>.',
+    '<!doctype html><meta charset="utf-8"><title>Copiloto alerts</title><p>Alertas oficiales de la DGT (radares, incidencias y trafico de detectores) para Copiloto. Ver <a href="meta.json">meta.json</a>.',
   );
   return bytes;
 }
