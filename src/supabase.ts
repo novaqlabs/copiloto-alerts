@@ -7,8 +7,16 @@ export interface SupabaseEnv { url: string; secretKey: string }
  * otro fallo (500, 403, red caida), que SI debe abortar la recogida de trazas de esta vuelta.
  */
 export class StorageError extends Error {
-  constructor(message: string, readonly status: number) {
+  // Campo declarado y asignado a mano, NO una «parameter property» (`readonly status` en la firma
+  // del constructor): Node ejecuta este TypeScript en modo strip-only, que solo borra los tipos y
+  // no admite esa azucar sintactica -con ella, `node src/cli.ts run` aborta con
+  // ERR_UNSUPPORTED_TYPESCRIPT_SYNTAX antes de descargar nada, aunque vitest (que si transpila)
+  // pase todos los tests.
+  readonly status: number;
+
+  constructor(message: string, status: number) {
     super(message);
+    this.status = status;
     this.name = 'StorageError';
   }
 }
