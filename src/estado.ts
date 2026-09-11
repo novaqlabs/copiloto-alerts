@@ -74,6 +74,8 @@ export interface Estado {
   locationsAt: string | null;
   /** Dia de Madrid (`yyyy-mm-dd`) en el que se aplico el ultimo decaimiento. */
   decayedOn: string | null;
+  /** Ultimo dia de Madrid en el que se podo `traces` (ver [pruneTraces]). */
+  tracesPrunedOn: string | null;
   detectors: Record<string, EstadoDetector>;
   /** `<celda100>_<sector>` -> franja -> `[media movil, muestras]` (Task 3). */
   traces: Record<string, Record<string, [number, number]>>;
@@ -101,6 +103,7 @@ export function emptyEstado(now: Date): Estado {
     updatedAt: now.toISOString(),
     locationsAt: null,
     decayedOn: null,
+    tracesPrunedOn: null,
     detectors: {},
     traces: {},
     traceSeenDays: {},
@@ -117,6 +120,7 @@ export function parseEstado(text: string): Estado | undefined {
       updatedAt: typeof raw.updatedAt === 'string' ? raw.updatedAt : new Date(0).toISOString(),
       locationsAt: typeof raw.locationsAt === 'string' ? raw.locationsAt : null,
       decayedOn: typeof raw.decayedOn === 'string' ? raw.decayedOn : null,
+      tracesPrunedOn: typeof raw.tracesPrunedOn === 'string' ? raw.tracesPrunedOn : null,
       detectors: raw.detectors ?? {},
       traces: raw.traces ?? {},
       // Estado publicado antes de I2 no trae este mapa: se parte vacio y el propio decaimiento
@@ -228,6 +232,38 @@ function daysBetween(from: string, to: string): number {
  * Suma la vuelta actual al estado (spec §3.2). MUTA y devuelve el mismo objeto: es un fichero de
  * varios MB que se lee una vez por ejecucion y no merece una copia profunda.
  */
+/**
+ * Poda de `traces` (I2 del repaso final, y su re-revision): toda clave-celda sin visitas en
+ * [TRACE_MAX_AGE_DAYS] se olvida, una vez por dia de Madrid.
+ *
+ * Vive fuera de [updateEstado] a proposito: alli quedaba dentro del bloque que solo corre cuando
+ * el feed de MEDIDAS de la DGT ha respondido, asi que una caida de ese feed de varios dias dejaba
+ * la poda callada mientras `updateTraces` seguia metiendo celdas nuevas -justo el caso en el que
+ * el estado mas crece-. El CLI la llama en cada vuelta, haya detectores o no.
+ */
+export function pruneTraces(estado: Estado, now: Date): Estado {
+  const today = madridDay(now);
+  if (estado.tracesPrunedOn === today) return estado;
+  for (const key of Object.keys(estado.traces)) {
+    const lastSeen = estado.traceSeenDays[key];
+    // Una clave sin fecha (estado publicado antes de este cambio) se estrena hoy, no se borra.
+    if (!lastSeen) {
+      estado.traceSeenDays[key] = today;
+      continue;
+    }
+    if (daysBetween(lastSeen, today) >= TRACE_MAX_AGE_DAYS) {
+      delete estado.traces[key];
+      delete estado.traceSeenDays[key];
+    }
+  }
+  // Una clave con fecha pero ya sin celda no tiene nada que podar: se limpia tambien.
+  for (const key of Object.keys(estado.traceSeenDays)) {
+    if (!(key in estado.traces)) delete estado.traceSeenDays[key];
+  }
+  estado.tracesPrunedOn = today;
+  return estado;
+}
+
 export function updateEstado(input: UpdateEstadoInput): Estado {
   const { estado, sites, now } = input;
 
@@ -261,20 +297,6 @@ export function updateEstado(input: UpdateEstadoInput): Estado {
         const next = weight * factor;
         if (next < HIST_MIN_WEIGHT) delete det.hist[bucket];
         else det.hist[bucket] = next;
-      }
-    }
-    // I2: `traces` solo inserta y nunca olvida por si sola. Se poda toda clave sin visitas en
-    // [TRACE_MAX_AGE_DAYS]; una clave sin `traceSeenDays` (estado publicado antes de este cambio)
-    // se estrena con la fecha de hoy en vez de borrarse de golpe.
-    for (const key of Object.keys(estado.traces)) {
-      const lastSeen = estado.traceSeenDays[key];
-      if (!lastSeen) {
-        estado.traceSeenDays[key] = today;
-        continue;
-      }
-      if (daysBetween(lastSeen, today) >= TRACE_MAX_AGE_DAYS) {
-        delete estado.traces[key];
-        delete estado.traceSeenDays[key];
       }
     }
   }

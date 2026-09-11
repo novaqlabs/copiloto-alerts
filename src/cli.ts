@@ -36,6 +36,7 @@ import {
   locationsAreStale,
   locationsFromEstado,
   parseEstado,
+  pruneTraces,
   referenceFor,
   updateEstado,
   type Estado,
@@ -205,6 +206,11 @@ async function run(): Promise<void> {
     const descartados = Object.values(discarded).reduce((a, b) => a + b, 0);
     log(`incidencias: ${items.length} registros (${descartados} descartados)`);
   }
+
+  // La poda de `traces` no depende de que la DGT haya respondido (re-revision de I2): si el feed
+  // de medidas se cae varios dias, `updateTraces` sigue metiendo celdas y la poda tiene que seguir
+  // quitandolas.
+  pruneTraces(estado, now);
 
   let trafico: TrafficSite[] = [];
   let traficoWithSpeed = 0;

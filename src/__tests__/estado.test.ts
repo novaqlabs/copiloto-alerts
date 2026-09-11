@@ -10,6 +10,7 @@ import {
   parseEstado,
   referenceFor,
   TRACE_MAX_AGE_DAYS,
+  pruneTraces,
   updateEstado,
   type Estado,
 } from '../estado.ts';
@@ -128,7 +129,7 @@ describe('poda de traces caducadas (TRACE_MAX_AGE_DAYS, I2)', () => {
 
   it('una celda vista hoy sobrevive al decaimiento diario', () => {
     const estado = estadoConTraces('2026-09-09', { viva: madridDay(NOW) });
-    const resultado = updateEstado({ estado, sites: [], now: NOW });
+    const resultado = pruneTraces(estado, NOW);
     expect(resultado.traces.viva).toBeDefined();
     expect(resultado.traceSeenDays.viva).toBe(madridDay(NOW));
   });
@@ -136,18 +137,18 @@ describe('poda de traces caducadas (TRACE_MAX_AGE_DAYS, I2)', () => {
   it(`una celda sin visitas en mas de ${TRACE_MAX_AGE_DAYS} dias se poda`, () => {
     // 2026-08-01 esta a mas de 28 dias del NOW (10 de septiembre).
     const estado = estadoConTraces('2026-09-09', { muerta: '2026-08-01' });
-    const resultado = updateEstado({ estado, sites: [], now: NOW });
+    const resultado = pruneTraces(estado, NOW);
     expect(resultado.traces.muerta).toBeUndefined();
     expect(resultado.traceSeenDays.muerta).toBeUndefined();
   });
 
   it('podar es idempotente: repetirlo en la vuelta siguiente no reintroduce ni corrompe nada', () => {
     const estado = estadoConTraces('2026-09-09', { viva: '2026-09-08', muerta: '2026-08-01' });
-    const dia1 = updateEstado({ estado, sites: [], now: NOW });
+    const dia1 = pruneTraces(estado, NOW);
     expect(Object.keys(dia1.traces)).toEqual(['viva']);
 
     const NOW2 = new Date(NOW.getTime() + 86_400_000); // la vuelta del dia siguiente
-    const dia2 = updateEstado({ estado: dia1, sites: [], now: NOW2 });
+    const dia2 = pruneTraces(dia1, NOW2);
     expect(Object.keys(dia2.traces)).toEqual(['viva']);
     expect(dia2.traces.viva).toEqual(dia1.traces.viva);
     expect(dia2.traceSeenDays).toEqual(dia1.traceSeenDays);
@@ -155,9 +156,28 @@ describe('poda de traces caducadas (TRACE_MAX_AGE_DAYS, I2)', () => {
 
   it('una clave publicada antes de I2, sin traceSeenDays, se estrena con hoy en vez de borrarse de golpe', () => {
     const estado: Estado = { ...emptyEstado(NOW), decayedOn: '2026-09-09', traces: { antigua: { '10': [50, 25] } }, traceSeenDays: {} };
-    const resultado = updateEstado({ estado, sites: [], now: NOW });
+    const resultado = pruneTraces(estado, NOW);
     expect(resultado.traces.antigua).toBeDefined();
     expect(resultado.traceSeenDays.antigua).toBe(madridDay(NOW));
+  });
+
+  it('se poda aunque la DGT no responda: no depende de updateEstado', () => {
+    // Re-revision de I2: la poda vivia dentro del bloque que solo corre con el feed de medidas, asi
+    // que una caida de varios dias la dejaba callada mientras `updateTraces` seguia metiendo celdas.
+    const estado = estadoConTraces('2026-09-09', { muerta: '2026-08-01', viva: madridDay(NOW) });
+    // Ni una sola llamada a updateEstado en toda la vuelta (la DGT no ha respondido).
+    const resultado = pruneTraces(estado, NOW);
+    expect(Object.keys(resultado.traces)).toEqual(['viva']);
+  });
+
+  it('solo poda una vez al dia, aunque se llame varias veces', () => {
+    const estado = estadoConTraces('2026-09-09', { antigua: '2026-08-01' });
+    pruneTraces(estado, NOW);
+    estado.traces.nueva = { '10': [60, 5] };
+    estado.traceSeenDays.nueva = '2026-08-01';
+    // Segunda llamada el mismo dia: no vuelve a recorrer nada, la celda recien metida sigue ahi.
+    pruneTraces(estado, NOW);
+    expect(estado.traces.nueva).toBeDefined();
   });
 });
 
