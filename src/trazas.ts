@@ -9,7 +9,7 @@
  */
 import { gunzipSync } from 'node:zlib';
 import { levelOf, type TrafficSite } from './detectores.ts';
-import { EMA_ALPHA, hourlySlot, MIN_REFERENCE_SAMPLES, type Estado } from './estado.ts';
+import { EMA_ALPHA, hourlySlot, madridDay, MIN_REFERENCE_SAMPLES, type Estado } from './estado.ts';
 import { StorageError, type StorageObject } from './supabase.ts';
 
 /** Ventana en vivo (spec §3.5): puntos y ficheros de los ultimos 20 minutos. */
@@ -141,10 +141,15 @@ export function aggregateTraces(input: { files: { bytes: Uint8Array }[]; now: Da
   return out;
 }
 
-/** Suma las celdas de esta vuelta al perfil de 168 franjas del estado (spec §3.5). Muta `estado`. */
+/**
+ * Suma las celdas de esta vuelta al perfil de 168 franjas del estado (spec §3.5). Muta `estado`.
+ * Tambien marca `traceSeenDays[key]` con el dia de Madrid de esta celda: es lo que permite podarla
+ * mas adelante si deja de visitarse (I2, ver `TRACE_MAX_AGE_DAYS` en `estado.ts`).
+ */
 export function updateTraces(estado: Estado, cells: AggregatedCell[]): Estado {
   for (const cell of cells) {
-    const slot = String(hourlySlot(new Date(cell.atMs)));
+    const seenAt = new Date(cell.atMs);
+    const slot = String(hourlySlot(seenAt));
     let bySlot = estado.traces[cell.key];
     if (!bySlot) {
       bySlot = {};
@@ -154,6 +159,7 @@ export function updateTraces(estado: Estado, cells: AggregatedCell[]): Estado {
     bySlot[slot] = previous
       ? [previous[0] + EMA_ALPHA * (cell.avgKmh - previous[0]), previous[1] + cell.points]
       : [cell.avgKmh, cell.points];
+    estado.traceSeenDays[cell.key] = madridDay(seenAt);
   }
   return estado;
 }

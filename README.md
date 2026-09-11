@@ -52,7 +52,7 @@ Publicados en la raíz del sitio de GitHub Pages:
 | `trafico/<celda>.json` | Array de `TrafficSite` (ver `src/detectores.ts`): `{ id, lat, lng, road, bearing, speedKmh, level, ratio, measuredAt }`, misma celda de un grado y mismo orden por `id`. |
 | `trafico/historico/<celda>.json` | Array de `TrafficHistorySite` (ver `src/estado.ts`): `{ id, lat, lng, road, bearing, profile }` con 168 posiciones (`number \| null`), franja 0 = lunes 00:00 en hora de Madrid. |
 | `trafico/usuarios/<celda>.json` | Array de `UserTrafficSite` (ver `src/trazas.ts`): igual que `trafico/<celda>.json` más `points`, con `id = "u:<celda100>_<sector>"`. |
-| `trafico/estado.json` | Estado interno acumulado (`src/estado.ts`): referencia por detector, perfil horario, perfil de las cuadrículas de usuarios y ubicaciones cacheadas. La app **no** lo lee; lo recupera la vuelta siguiente con `--prev-estado`. |
+| `trafico/estado.json` | Estado interno acumulado (`src/estado.ts`): referencia por detector, perfil horario, perfil de las cuadrículas de usuarios y ubicaciones cacheadas. La app **no** lo lee; lo recupera la vuelta siguiente con `--prev-estado`. El perfil de detectores decae un 5 % al día (`HIST_DECAY_PER_DAY`); el de cuadrículas de usuarios se poda por completo cuando lleva `TRACE_MAX_AGE_DAYS` (28 días) sin verse, para que el fichero no crezca sin límite. |
 
 Lo que cae fuera de `CELL_BOUNDS` (España peninsular, Baleares, Canarias y entorno próximo) se
 descarta y se cuenta en `meta.json#discarded.outOfCoverage`.

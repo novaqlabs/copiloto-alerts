@@ -9,6 +9,7 @@ import {
   madridDay,
   parseEstado,
   referenceFor,
+  TRACE_MAX_AGE_DAYS,
   updateEstado,
   type Estado,
 } from '../estado.ts';
@@ -112,6 +113,51 @@ describe('updateEstado', () => {
     expect(locationsFromEstado(estado)).toEqual([
       { id: 'GUID_DET_138003', lat: 40.462196, lng: -3.77084, road: 'A-6', area: 'MADRID', direction: 'positive', singularity: 'AUTOPISTA / AUTOVÍA' },
     ]);
+  });
+});
+
+describe('poda de traces caducadas (TRACE_MAX_AGE_DAYS, I2)', () => {
+  function estadoConTraces(decayedOn: string, seenDays: Record<string, string>): Estado {
+    return {
+      ...emptyEstado(NOW),
+      decayedOn,
+      traces: Object.fromEntries(Object.keys(seenDays).map((key) => [key, { '10': [50, 25] as [number, number] }])),
+      traceSeenDays: seenDays,
+    };
+  }
+
+  it('una celda vista hoy sobrevive al decaimiento diario', () => {
+    const estado = estadoConTraces('2026-09-09', { viva: madridDay(NOW) });
+    const resultado = updateEstado({ estado, sites: [], now: NOW });
+    expect(resultado.traces.viva).toBeDefined();
+    expect(resultado.traceSeenDays.viva).toBe(madridDay(NOW));
+  });
+
+  it(`una celda sin visitas en mas de ${TRACE_MAX_AGE_DAYS} dias se poda`, () => {
+    // 2026-08-01 esta a mas de 28 dias del NOW (10 de septiembre).
+    const estado = estadoConTraces('2026-09-09', { muerta: '2026-08-01' });
+    const resultado = updateEstado({ estado, sites: [], now: NOW });
+    expect(resultado.traces.muerta).toBeUndefined();
+    expect(resultado.traceSeenDays.muerta).toBeUndefined();
+  });
+
+  it('podar es idempotente: repetirlo en la vuelta siguiente no reintroduce ni corrompe nada', () => {
+    const estado = estadoConTraces('2026-09-09', { viva: '2026-09-08', muerta: '2026-08-01' });
+    const dia1 = updateEstado({ estado, sites: [], now: NOW });
+    expect(Object.keys(dia1.traces)).toEqual(['viva']);
+
+    const NOW2 = new Date(NOW.getTime() + 86_400_000); // la vuelta del dia siguiente
+    const dia2 = updateEstado({ estado: dia1, sites: [], now: NOW2 });
+    expect(Object.keys(dia2.traces)).toEqual(['viva']);
+    expect(dia2.traces.viva).toEqual(dia1.traces.viva);
+    expect(dia2.traceSeenDays).toEqual(dia1.traceSeenDays);
+  });
+
+  it('una clave publicada antes de I2, sin traceSeenDays, se estrena con hoy en vez de borrarse de golpe', () => {
+    const estado: Estado = { ...emptyEstado(NOW), decayedOn: '2026-09-09', traces: { antigua: { '10': [50, 25] } }, traceSeenDays: {} };
+    const resultado = updateEstado({ estado, sites: [], now: NOW });
+    expect(resultado.traces.antigua).toBeDefined();
+    expect(resultado.traceSeenDays.antigua).toBe(madridDay(NOW));
   });
 });
 

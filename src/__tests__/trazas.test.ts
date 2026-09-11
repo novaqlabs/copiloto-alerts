@@ -137,6 +137,13 @@ describe('updateTraces', () => {
     // 22 + 0,1 x (22 - 22) = 22, y el recuento suma los puntos de la segunda vuelta.
     expect(segunda.traces['40412_-3708_4']['94'][1]).toBe(6);
   });
+
+  it('marca traceSeenDays con el dia de Madrid del punto mas reciente de la celda (I2)', () => {
+    const cells = aggregateTraces({ files: [{ bytes: trazaGz(TRES_PUNTOS) }], now: NOW });
+    const estado = updateTraces(emptyEstado(NOW), cells);
+    // atMs de la celda es 2026-09-10T20:20:20Z, que en Madrid (verano, +02:00) sigue siendo el 10.
+    expect(estado.traceSeenDays['40412_-3708_4']).toBe('2026-09-10');
+  });
 });
 
 describe('collectTraces', () => {

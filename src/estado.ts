@@ -35,6 +35,16 @@ export const LOCATIONS_MAX_AGE_MS = 24 * 3_600_000;
 /** Peso por debajo del cual un cubo del histograma se borra: ya no cambia el percentil. */
 const HIST_MIN_WEIGHT = 0.01;
 
+/**
+ * Dias sin visitas tras los que se poda una celda-sector de `traces` (I2 del repaso de fase D):
+ * `estado.traces` solo inserta y nunca olvida, asi que sin tope crece para siempre y `estado.json`
+ * se descarga y republica entero cada 10 minutos. 28 dias = 4 semanas de Madrid completas: es del
+ * orden del mes que pide el repaso, y al ser un multiplo exacto de 7 una celda que solo se visita un
+ * dia fijo de la semana (p. ej. el trayecto de los viernes) tiene siempre las mismas 4 oportunidades
+ * de refrescar su franja antes de que se pode, sin que el corte caiga a mitad de semana.
+ */
+export const TRACE_MAX_AGE_DAYS = 28;
+
 const MADRID = 'Europe/Madrid';
 
 const ISO_DAY_BY_SHORT_NAME: Record<string, number> = { Mon: 1, Tue: 2, Wed: 3, Thu: 4, Fri: 5, Sat: 6, Sun: 7 };
@@ -67,6 +77,12 @@ export interface Estado {
   detectors: Record<string, EstadoDetector>;
   /** `<celda100>_<sector>` -> franja -> `[media movil, muestras]` (Task 3). */
   traces: Record<string, Record<string, [number, number]>>;
+  /**
+   * `<celda100>_<sector>` -> dia de Madrid (`yyyy-mm-dd`) de la ultima vez que `updateTraces` toco
+   * esa clave. Sirve solo para podar `traces` (I2): una clave sin visitas en [TRACE_MAX_AGE_DAYS] se
+   * borra de los dos mapas a la vez.
+   */
+  traceSeenDays: Record<string, string>;
 }
 
 /** Un elemento de `trafico/historico/<celda>.json` (contrato del plan). */
@@ -87,6 +103,7 @@ export function emptyEstado(now: Date): Estado {
     decayedOn: null,
     detectors: {},
     traces: {},
+    traceSeenDays: {},
   };
 }
 
@@ -102,6 +119,9 @@ export function parseEstado(text: string): Estado | undefined {
       decayedOn: typeof raw.decayedOn === 'string' ? raw.decayedOn : null,
       detectors: raw.detectors ?? {},
       traces: raw.traces ?? {},
+      // Estado publicado antes de I2 no trae este mapa: se parte vacio y el propio decaimiento
+      // diario le da a cada clave sin fecha una primera fecha de referencia (ver updateEstado).
+      traceSeenDays: raw.traceSeenDays ?? {},
     };
   } catch {
     return undefined;
@@ -231,7 +251,8 @@ export function updateEstado(input: UpdateEstadoInput): Estado {
     estado.locationsAt = now.toISOString();
   }
 
-  // 2) Decaimiento diario del histograma, ANTES de sumar las muestras de hoy.
+  // 2) Decaimiento diario del histograma y poda de `traces` caducadas, ANTES de sumar las
+  //    muestras de hoy. Mismo patron que el histograma: se dispara una vez por dia de Madrid.
   const today = madridDay(now);
   if (estado.decayedOn && estado.decayedOn !== today) {
     const factor = HIST_DECAY_PER_DAY ** daysBetween(estado.decayedOn, today);
@@ -240,6 +261,20 @@ export function updateEstado(input: UpdateEstadoInput): Estado {
         const next = weight * factor;
         if (next < HIST_MIN_WEIGHT) delete det.hist[bucket];
         else det.hist[bucket] = next;
+      }
+    }
+    // I2: `traces` solo inserta y nunca olvida por si sola. Se poda toda clave sin visitas en
+    // [TRACE_MAX_AGE_DAYS]; una clave sin `traceSeenDays` (estado publicado antes de este cambio)
+    // se estrena con la fecha de hoy en vez de borrarse de golpe.
+    for (const key of Object.keys(estado.traces)) {
+      const lastSeen = estado.traceSeenDays[key];
+      if (!lastSeen) {
+        estado.traceSeenDays[key] = today;
+        continue;
+      }
+      if (daysBetween(lastSeen, today) >= TRACE_MAX_AGE_DAYS) {
+        delete estado.traces[key];
+        delete estado.traceSeenDays[key];
       }
     }
   }
