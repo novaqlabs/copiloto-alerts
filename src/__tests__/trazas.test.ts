@@ -225,6 +225,18 @@ describe('kilometros y minutos por trayecto (fase E)', () => {
     });
   });
 
+  it('un trayecto de mas de TRIP_MAX_KM no se publica aunque cada tramo pase el filtro de velocidad', () => {
+    // Dos puntos separados 4 horas (14.400.000 s) y ~3.400 km (40,-3 a 55,37): velocidad implicita
+    // muy por debajo de TRIP_MAX_SEGMENT_KMH (250), asi que el filtro de tramo NO lo para; el techo
+    // por trayecto (C1) si.
+    const traza = parseTrace(trazaGz([
+      [0, 40.0, -3.0, 90, 0],
+      [14_400_000, 55.0, 37.0, 90, 0],
+    ]));
+    expect(traza).toBeDefined();
+    expect(tripSummary('s', traza!)).toBeUndefined();
+  });
+
   it('un trayecto de menos de TRIP_MIN_KM o de un solo punto no se publica', () => {
     const corto = parseTrace(trazaGz([[0, 40.40, -3.70, 5, 0], [60, 40.4005, -3.70, 5, 0]]));
     expect(tripSummary('s', corto!)).toBeUndefined();      // 55 m

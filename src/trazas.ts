@@ -56,6 +56,14 @@ export function sessionOfPath(path: string): string | undefined {
 const TRIP_MAX_SEGMENT_KMH = 250;
 
 /**
+ * Techo de kilometros por TRAYECTO (C1 del repaso final de la fase E): un fichero de trayecto lo
+ * escribe el cliente y cualquier sesion autenticada puede subir uno, asi que el pipeline no se
+ * fia del total. Ningun viaje real con la app abierta pasa de esto (2.000 km son ~20 h al volante
+ * sin cerrar la app); por encima, el fichero es basura o un fraude y no se publica su fila.
+ */
+export const TRIP_MAX_KM = 2000;
+
+/**
  * Kilometros y minutos de un trayecto (spec §3.6). La distancia es la suma de los tramos entre
  * puntos consecutivos con la misma formula del motor (`haversineKm`), y los minutos salen del `dtS`
  * del ultimo punto menos el del primero. Los puntos son los del fichero YA RECORTADO por la app
@@ -78,6 +86,10 @@ export function tripSummary(session: string, trace: Trace): TraceKmRow | undefin
     if (speedKmh > TRIP_MAX_SEGMENT_KMH) continue;
     km += segmentKm;
   }
+  // C1 del repaso final de la fase E: un trayecto por encima del techo no se publica, aunque cada
+  // tramo por separado pase el filtro de velocidad (un `dtS` enorme entre dos puntos cualesquiera
+  // da una velocidad implicita baja y se cuela por debajo de TRIP_MAX_SEGMENT_KMH).
+  if (km > TRIP_MAX_KM) return undefined;
   if (km < TRIP_MIN_KM) return undefined;
   const minutes = Math.max(0, Math.round((points[points.length - 1].dtS - points[0].dtS) / 60));
   return { session, km: Math.round(km * 100) / 100, minutes };
