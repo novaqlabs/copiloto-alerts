@@ -10,7 +10,18 @@ export interface Radar {
   direction?: 'positive' | 'negative' | 'both' | 'unknown';
   kind: 'fixed' | 'section';
   speedLimit?: number;
+  /** Quién publica el radar: siempre la DGT (los datos, el identificador, la vía y el sentido). */
   source: 'dgt';
+  /**
+   * De dónde sale la POSICIÓN publicada («Mejoras 1», spec §1.4): `'osm'` si se sustituyó por la de
+   * un nodo `highway=speed_camera` de OpenStreetMap a menos de 250 m, `'dgt'` si se publica la del
+   * feed DATEX II tal cual. Lo pone `matchOsmCameras` (`src/osm-cameras.ts`); `parseRadares` no lo
+   * rellena, así que es opcional para no obligar a nadie a inventarse un valor.
+   *
+   * La app lo ignora (`OfficialAlerts.RadarJson` se decodifica con `ignoreUnknownKeys`), así que la
+   * clave nueva no rompe ninguna versión ya instalada y `contractVersion` sigue siendo 1.
+   */
+  source_position?: 'dgt' | 'osm';
 }
 
 const DIRECTIONS = new Set(['positive', 'negative', 'both', 'unknown']);

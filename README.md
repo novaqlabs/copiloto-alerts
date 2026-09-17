@@ -9,7 +9,8 @@ los precios de carburantes.
 ## Qué publica
 
 - **Radares fijos y de tramo** (`src/radares.ts`): posiciones puntuales o secciones
-  inicio/fin, carretera, sentido y velocidad si el feed la incluye.
+  inicio/fin, carretera, sentido y velocidad si el feed la incluye. La **posición** se cruza con
+  OpenStreetMap (ver más abajo) y cada radar publica `source_position` (`"osm"` o `"dgt"`).
 - **Incidencias de tráfico** (`src/incidencias.ts`): accidentes, peligros en la vía, cortes y
   carriles cerrados, retenciones, obras y tiempo adverso, con el texto original de la DGT.
 - **Catálogo de tipos de reporte** (`catalogo.json`): además de los tipos oficiales de la DGT
@@ -30,6 +31,43 @@ los precios de carburantes.
 Las capas se recortan en **celdas de un grado** (`src/cells.ts`, `cellOf`) sobre la caja que
 cubre España peninsular, Baleares, Canarias y el entorno próximo (`CELL_BOUNDS`), para que
 Copiloto solo descargue las celdas cercanas a la ruta en curso.
+
+## Posición de los radares: cruce con OpenStreetMap
+
+El feed DATEX II de la DGT da la posición del radar con la precisión del punto kilométrico, no la
+del poste: en carretera los avisos llegaban unos 100 m desplazados. OpenStreetMap tiene los postes
+mapeados como nodos `highway=speed_camera` con precisión de metros, así que `src/osm-cameras.ts`:
+
+1. Agrupa los radares por celda de un grado (`cellsWithRadares`) y pide a **Overpass** los nodos
+   `highway=speed_camera` de cada caja, ensanchada 0,01° (~1,1 km), con `[out:json][timeout:20]`,
+   `User-Agent` propio y **una consulta por celda, en serie**.
+2. Guarda el resultado en `data/osm-cameras.json` (`{ updatedAt, cells }`), que **está commiteado**.
+3. Para cada radar busca el nodo más cercano de su celda: si está a menos de **250 m**, publica esa
+   posición y marca `source_position: "osm"`; si no, deja la de la DGT y marca `"dgt"`. En un radar
+   de tramo solo se mueve el punto de inicio; `endLat`/`endLng` no se tocan.
+4. El log de publicación dice cuántos casaron:
+   `radares: 412 de 764 con posicion de OpenStreetMap (source_position=osm)`.
+
+**Cuándo se consulta Overpass.** Solo si la caché tiene **más de 7 días** *y* la vuelta cae en la
+**ventana diaria de mantenimiento** (04:00–04:09 UTC, la misma de `report_types` y la limpieza de
+trazas). El workflow corre cada 10 minutos y no commitea nada, así que sin esa segunda condición una
+caché envejecida saldría a Overpass ~4.300 veces al día. Fuera de la ventana se usa la caché tal
+cual. **Nada de esto bloquea la publicación**: cualquier fallo (Overpass caído, 429, tiempo límite,
+caché ilegible) se anota en el log y los radares salen con la posición de la DGT.
+
+**Cómo se actualiza la caché commiteada.** La vuelta que refresca escribe `data/osm-cameras.json` en
+disco, pero el workflow de GitHub Actions no puede commitearlo (`permissions: contents: read`). Para
+guardar el refresco, ejecuta el pipeline en local en la ventana diaria —o borra la fecha de
+`updatedAt` a mano para forzarlo— y commitea el fichero resultante:
+
+```bash
+cd copiloto-alerts
+node src/cli.ts run --out out --skip-supabase
+git add data/osm-cameras.json
+```
+
+`contractVersion` sigue siendo **1**: `source_position` es una clave añadida, y la app la ignora
+(`ignoreUnknownKeys`), así que las versiones ya instaladas no se enteran.
 
 ## Fuente y licencia
 
