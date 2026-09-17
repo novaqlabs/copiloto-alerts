@@ -7,10 +7,11 @@
  * precisión de metros, así que si hay un `highway=speed_camera` a menos de [OSM_MATCH_MAX_M] del
  * punto de la DGT se publica el de OSM y se deja constancia en `source_position`.
  *
- * Todo lo de aquí es puro salvo [refreshOsmCameras], que recibe la función de red como parámetro:
- * los tests nunca salen a internet.
+ * Todo lo de aquí es puro salvo [refreshOsmCameras] y [refreshAndMatchOsmCameras], que reciben la
+ * red (y, la segunda, el disco) como parámetros: los tests nunca salen a internet ni tocan ficheros.
  */
 import { cellOf } from './cells.ts';
+import { isDailyMaintenanceWindow } from './schedule.ts';
 import type { Radar } from './radares.ts';
 
 /** Un nodo `highway=speed_camera` de OpenStreetMap: solo su posición, nada más. */
@@ -49,9 +50,6 @@ export const OSM_QUERY_TIMEOUT_MS = 20_000;
  * al otro lado, y [matchOsmCameras] solo necesita mirar en la lista de SU celda (decisión M13).
  */
 export const OSM_BBOX_MARGIN_DEG = 0.01;
-
-/** Metros por grado de latitud; el mismo número que usa el motor de la app (`engine/matching`). */
-const M_PER_DEG_LAT = 111_320;
 
 /** Caché recién nacida: sin fecha útil, así que [osmCacheIsStale] la considera siempre caducada. */
 export function emptyOsmCameraCache(): OsmCameraCache {
@@ -151,12 +149,26 @@ export interface RefreshOsmCamerasInput {
 }
 
 /**
+ * Señal de «para todo, no sigas»: Overpass está devolviendo 429 (demasiadas peticiones) o 504
+ * (tiempo límite en el propio servidor), así que seguir martilleando con las celdas que quedan de
+ * esta vuelta sería una falta de respeto con un servicio público compartido (revisión de la Task 4,
+ * hallazgo Minor #4). Quien construye `fetchCell` la lanza (`fetchOverpassCameras` en `cli.ts`);
+ * [refreshOsmCameras] la reconoce y abandona el resto de celdas de esta vuelta sin reintentar ni
+ * esperar -la caché vieja de esas celdas sigue sirviendo, y se reintentará en la próxima ventana
+ * diaria-. Cualquier OTRO error (tiempo límite del cliente, JSON raro, otro HTTP) se sigue tratando
+ * celda a celda, como antes.
+ */
+export class OverpassAbortError extends Error {}
+
+/**
  * Refresca la caché consultando Overpass **una vez por celda y en serie** (no en paralelo: son
  * ~30 consultas y el servidor público es de todos).
  *
  * Nunca lanza: una celda que falle conserva lo que ya había en la caché y se cuenta en `failed`. Si
  * fallan TODAS, la caché se devuelve intacta -con su `updatedAt` viejo, para que el intento se
- * repita mañana- en vez de quedarse vacía por un mal día de Overpass.
+ * repita mañana- en vez de quedarse vacía por un mal día de Overpass. Un [OverpassAbortError] corta
+ * el bucle: las celdas que quedaban ni se piden ni se cuentan como fallidas, simplemente se quedan
+ * con lo que ya hubiera en la caché previa.
  */
 export async function refreshOsmCameras(
   input: RefreshOsmCamerasInput,
@@ -168,35 +180,63 @@ export async function refreshOsmCameras(
     try {
       cells[cell] = await input.fetchCell(cell);
       queried++;
-    } catch {
+    } catch (e) {
       failed++;
+      if (e instanceof OverpassAbortError) break;
     }
   }
   if (queried === 0) return { cache: input.cache, queried, failed };
   return { cache: { updatedAt: input.now.toISOString(), cells }, queried, failed };
 }
 
-/** Metros entre dos puntos, plano equirectangular: sobra de sobra para distancias de metros. */
-function metersBetween(aLat: number, aLng: number, bLat: number, bLng: number): number {
-  const mPerDegLng = M_PER_DEG_LAT * Math.cos((aLat * Math.PI) / 180);
-  const dy = (bLat - aLat) * M_PER_DEG_LAT;
-  const dx = (bLng - aLng) * mPerDegLng;
-  return Math.sqrt(dx * dx + dy * dy);
+/** Radio medio de la Tierra (m), para el haversine de [metersBetween]. */
+const EARTH_RADIUS_M = 6_371_000;
+
+/**
+ * Metros entre dos puntos con la fórmula de haversine (grados a radianes primero; revisión de la
+ * Task 4, hallazgo Minor #5: a las distancias en juego aquí -250-400 m- una proyección plana ya
+ * daba el mismo resultado, pero esta es la fórmula correcta sin aproximar).
+ */
+export function metersBetween(aLat: number, aLng: number, bLat: number, bLng: number): number {
+  const toRad = (deg: number) => (deg * Math.PI) / 180;
+  const dLat = toRad(bLat - aLat);
+  const dLng = toRad(bLng - aLng);
+  const sinDLat = Math.sin(dLat / 2);
+  const sinDLng = Math.sin(dLng / 2);
+  const a = sinDLat * sinDLat + Math.cos(toRad(aLat)) * Math.cos(toRad(bLat)) * sinDLng * sinDLng;
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+  return EARTH_RADIUS_M * c;
 }
 
 /**
- * Sustituye la posición de cada radar por la del nodo de OSM más cercano si lo hay a menos de
- * [OSM_MATCH_MAX_M], y marca en `source_position` de dónde salió al final la posición publicada.
+ * Sustituye la posición de cada radar por la del nodo de OSM más cercano si lo hay a MENOS de
+ * [OSM_MATCH_MAX_M] -en sentido estricto: a exactamente [OSM_MATCH_MAX_M] NO sustituye, revisión de
+ * la Task 4, hallazgo Minor #3-, y marca en `source_position` de dónde salió al final la posición
+ * publicada.
  *
  * De un radar de tramo solo se mueve el INICIO (`lat`/`lng`): `endLat`/`endLng` no se tocan nunca
- * (decisión M12). El resto de campos se copia tal cual. Devuelve también cuántos casaron, que es lo
- * que el CLI escribe en el log de publicación (spec §1.4).
+ * (decisión M12). El resto de campos se copia tal cual.
+ *
+ * Devuelve TRES recuentos, no solo `matched` (revisión de la Task 4, hallazgo Important #1: el log
+ * de publicación tiene que poder distinguir "no había ningún nodo de OSM en su celda" de "había
+ * nodos, pero el más cercano estaba a 250 m o más"):
+ * - `matched`: se sustituyó por un nodo de OSM.
+ * - `tooFar`: su celda SÍ tenía nodos de OSM, pero el más cercano estaba a 250 m o más.
+ * - `withoutOsmData`: su celda no tiene ninguna entrada en la caché (o está vacía).
  */
-export function matchOsmCameras(radares: Radar[], cache: OsmCameraCache): { radares: Radar[]; matched: number } {
+export function matchOsmCameras(
+  radares: Radar[],
+  cache: OsmCameraCache,
+): { radares: Radar[]; matched: number; tooFar: number; withoutOsmData: number } {
   let matched = 0;
+  let tooFar = 0;
+  let withoutOsmData = 0;
   const out = radares.map((radar) => {
     const candidatas = cache.cells[cellOf(radar.lat, radar.lng)];
-    if (!candidatas || candidatas.length === 0) return { ...radar, source_position: 'dgt' as const };
+    if (!candidatas || candidatas.length === 0) {
+      withoutOsmData++;
+      return { ...radar, source_position: 'dgt' as const };
+    }
     let mejor: OsmCamera | undefined;
     let mejorM = Number.POSITIVE_INFINITY;
     for (const camara of candidatas) {
@@ -206,9 +246,92 @@ export function matchOsmCameras(radares: Radar[], cache: OsmCameraCache): { rada
         mejor = camara;
       }
     }
-    if (!mejor || mejorM > OSM_MATCH_MAX_M) return { ...radar, source_position: 'dgt' as const };
+    // Estricto: a exactamente OSM_MATCH_MAX_M no sustituye ("menos de 250 m", no "como mucho").
+    if (!mejor || mejorM >= OSM_MATCH_MAX_M) {
+      tooFar++;
+      return { ...radar, source_position: 'dgt' as const };
+    }
     matched++;
     return { ...radar, lat: mejor.lat, lng: mejor.lng, source_position: 'osm' as const };
   });
-  return { radares: out, matched };
+  return { radares: out, matched, tooFar, withoutOsmData };
+}
+
+/** Entrada de [refreshAndMatchOsmCameras]: una vuelta completa, con la red y el disco inyectados. */
+export interface RefreshAndMatchOsmCamerasInput {
+  radares: Radar[];
+  cache: OsmCameraCache;
+  now: Date;
+  fetchCell: (cell: string) => Promise<OsmCamera[]>;
+  /**
+   * Persiste la caché refrescada en disco. Un fallo aquí NUNCA debe impedir el cruce: ver la nota
+   * de [refreshAndMatchOsmCameras] (revisión de la Task 4, hallazgo Important #2).
+   */
+  writeCache: (cache: OsmCameraCache) => Promise<void>;
+}
+
+export interface RefreshAndMatchOsmCamerasResult {
+  radares: Radar[];
+  matched: number;
+  tooFar: number;
+  withoutOsmData: number;
+  /** Si esta vuelta ha llegado a intentar refrescar la caché (caché caducada Y ventana diaria). */
+  refreshed: boolean;
+  queried: number;
+  failed: number;
+  /** Mensaje del fallo si `writeCache` ha lanzado; ausente si no se ha intentado o ha ido bien. */
+  cacheWriteError?: string;
+}
+
+/**
+ * Orquesta una vuelta completa: refresca la caché si toca (decisión M10: más de
+ * [OSM_CACHE_MAX_AGE_DAYS] días Y ventana diaria de mantenimiento, `isDailyMaintenanceWindow`) y
+ * cruza los radares con ella. Recibe la red (`fetchCell`) y el disco (`writeCache`) como
+ * parámetros, igual que [refreshOsmCameras]: los tests nunca tocan Overpass ni el sistema de
+ * ficheros.
+ *
+ * El cruce ([matchOsmCameras]) se calcula SIEMPRE con la caché ya refrescada EN MEMORIA, antes de
+ * intentar persistirla en disco: si `writeCache` falla (disco lleno, permisos, ruta de solo
+ * lectura en el runner), el cruce de esta vuelta ya está hecho y no se ve afectado -solo se pierde
+ * el refresco para la PRÓXIMA vuelta, que se reintentará mañana- (revisión de la Task 4, hallazgo
+ * Important #2: antes, un fallo de `writeFile` tiraba por el `catch` exterior de `cli.ts` y
+ * publicaba los radares SIN `source_position` en absoluto, ni `"osm"` ni `"dgt"`).
+ */
+export async function refreshAndMatchOsmCameras(
+  input: RefreshAndMatchOsmCamerasInput,
+): Promise<RefreshAndMatchOsmCamerasResult> {
+  if (input.radares.length === 0) {
+    return { radares: input.radares, matched: 0, tooFar: 0, withoutOsmData: 0, refreshed: false, queried: 0, failed: 0 };
+  }
+  let cache = input.cache;
+  let refreshed = false;
+  let queried = 0;
+  let failed = 0;
+  let cacheWriteError: string | undefined;
+  if (osmCacheIsStale(cache, input.now) && isDailyMaintenanceWindow(input.now)) {
+    refreshed = true;
+    const celdas = cellsWithRadares(input.radares);
+    const refresco = await refreshOsmCameras({ cells: celdas, cache, now: input.now, fetchCell: input.fetchCell });
+    cache = refresco.cache;
+    queried = refresco.queried;
+    failed = refresco.failed;
+    if (refresco.queried > 0) {
+      try {
+        await input.writeCache(cache);
+      } catch (e) {
+        cacheWriteError = e instanceof Error ? e.message : String(e);
+      }
+    }
+  }
+  const { radares, matched, tooFar, withoutOsmData } = matchOsmCameras(input.radares, cache);
+  return {
+    radares,
+    matched,
+    tooFar,
+    withoutOsmData,
+    refreshed,
+    queried,
+    failed,
+    ...(cacheWriteError ? { cacheWriteError } : {}),
+  };
 }

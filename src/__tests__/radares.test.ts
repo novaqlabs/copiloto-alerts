@@ -5,13 +5,16 @@ import {
   OSM_BBOX_MARGIN_DEG,
   OSM_CACHE_MAX_AGE_DAYS,
   OSM_MATCH_MAX_M,
+  OverpassAbortError,
   cellsWithRadares,
   emptyOsmCameraCache,
   matchOsmCameras,
+  metersBetween,
   osmCacheIsStale,
   overpassCamerasQuery,
   parseOsmCameraCache,
   parseOverpassCameras,
+  refreshAndMatchOsmCameras,
   refreshOsmCameras,
   type OsmCameraCache,
 } from '../osm-cameras.ts';
@@ -61,6 +64,15 @@ describe('cruce con los radares de OpenStreetMap', () => {
 
   /** Desplaza `lat` los metros indicados hacia el norte (1 grado de latitud = 111.320 m). */
   const norte = (lat: number, metros: number) => lat + metros / 111_320;
+
+  /**
+   * Como `norte`, pero con la MISMA formula (radio terrestre 6.371.000 m) que usa `metersBetween`
+   * en produccion desde la ronda 1 de arreglos: para un desplazamiento puro norte-sur, el haversine
+   * se reduce a `distancia = radio * deltaLat(radianes)`, asi que esta es su inversa exacta. Solo
+   * se usa en las pruebas de frontera de 250 m, donde el ~0,1% de diferencia frente a `norte`
+   * (pensada para casar con el motor de la app, no con haversine) si importa.
+   */
+  const norteHaversine = (lat: number, metros: number) => lat + (metros / 6_371_000) * (180 / Math.PI);
 
   const cacheCon = (camaras: { lat: number; lng: number }[]): OsmCameraCache => ({
     updatedAt: '2026-09-17T04:00:00.000Z',
@@ -236,5 +248,176 @@ describe('cruce con los radares de OpenStreetMap', () => {
     expect(resultado.queried).toBe(0);
     expect(resultado.failed).toBe(1);
     expect(resultado.cache).toEqual(previa);
+  });
+});
+
+describe('ronda 1 de arreglos (revision de la Task 4)', () => {
+  const dgt: Radar = {
+    id: 'GUID_CAB_1',
+    lat: 38.4,
+    lng: -0.6,
+    road: 'A-31',
+    direction: 'positive',
+    kind: 'fixed',
+    source: 'dgt',
+  };
+
+  const norte = (lat: number, metros: number) => lat + metros / 111_320;
+
+  /** Ver la nota de `norteHaversine` del describe anterior: aqui hace falta la misma inversa exacta
+   * del haversine (no la de `norte`, pensada para el motor de la app) porque la frontera de 250 m
+   * es sensible al 0,1% de diferencia entre ambos modelos. */
+  const norteHaversine = (lat: number, metros: number) => lat + (metros / 6_371_000) * (180 / Math.PI);
+
+  const cacheCon = (camaras: { lat: number; lng: number }[]): OsmCameraCache => ({
+    updatedAt: '2026-09-17T04:00:00.000Z',
+    cells: { '38_-1': camaras },
+  });
+
+  // Important #1: tres recuentos, no solo "matched".
+  it('matchOsmCameras cuenta por separado los cruzados, los que no llegan a 250 m y los que no tienen datos de OSM', () => {
+    const cerca: Radar = { ...dgt, id: 'GUID_CAB_A' };
+    // Misma celda 38_-1 que `cerca`, pero a ~61 km de la unica camara de esa celda: no cruza.
+    const lejos: Radar = { ...dgt, id: 'GUID_CAB_B', lat: 38.9, lng: -0.9 };
+    // Celda 40_-4, sin ninguna entrada en la cache.
+    const sinDatos: Radar = { ...dgt, id: 'GUID_CAB_C', lat: 40.4, lng: -3.7 };
+    const cache = cacheCon([{ lat: norte(38.4, 120), lng: -0.6 }]);
+
+    const { matched, tooFar, withoutOsmData } = matchOsmCameras([cerca, lejos, sinDatos], cache);
+
+    expect(matched).toBe(1);
+    expect(tooFar).toBe(1);
+    expect(withoutOsmData).toBe(1);
+  });
+
+  // Important #2: un fallo al escribir la cache en disco NUNCA debe perder el cruce ya calculado.
+  it('si falla la escritura de la cache en disco, el cruce ya calculado no se pierde y todos los radares llevan source_position', async () => {
+    const resultado = await refreshAndMatchOsmCameras({
+      radares: [dgt],
+      cache: emptyOsmCameraCache(),
+      now: new Date('2026-09-17T04:02:00.000Z'), // caducada y dentro de la ventana diaria
+      fetchCell: async () => [{ lat: norte(38.4, 120), lng: -0.6 }],
+      writeCache: async () => {
+        throw new Error('EACCES: permission denied');
+      },
+    });
+
+    expect(resultado.refreshed).toBe(true);
+    expect(resultado.queried).toBe(1);
+    expect(resultado.matched).toBe(1);
+    expect(resultado.radares[0].source_position).toBe('osm');
+    expect(resultado.cacheWriteError).toContain('EACCES');
+  });
+
+  it('si la escritura en disco va bien, no hay cacheWriteError y la cache escrita es la refrescada', async () => {
+    const escritas: OsmCameraCache[] = [];
+    const resultado = await refreshAndMatchOsmCameras({
+      radares: [dgt],
+      cache: emptyOsmCameraCache(),
+      now: new Date('2026-09-17T04:02:00.000Z'),
+      fetchCell: async () => [{ lat: norte(38.4, 120), lng: -0.6 }],
+      writeCache: async (c) => {
+        escritas.push(c);
+      },
+    });
+
+    expect(resultado.cacheWriteError).toBeUndefined();
+    expect(escritas).toHaveLength(1);
+    expect(escritas[0].cells['38_-1']).toEqual([{ lat: norte(38.4, 120), lng: -0.6 }]);
+  });
+
+  it('con la cache al dia, refreshAndMatchOsmCameras no toca la red ni el disco', async () => {
+    let fetchCalls = 0;
+    let writeCalls = 0;
+    const cache = cacheCon([{ lat: norte(38.4, 120), lng: -0.6 }]); // updatedAt reciente
+    const resultado = await refreshAndMatchOsmCameras({
+      radares: [dgt],
+      cache,
+      now: new Date('2026-09-17T04:02:00.000Z'),
+      fetchCell: async () => {
+        fetchCalls++;
+        return [];
+      },
+      writeCache: async () => {
+        writeCalls++;
+      },
+    });
+
+    expect(resultado.refreshed).toBe(false);
+    expect(fetchCalls).toBe(0);
+    expect(writeCalls).toBe(0);
+    expect(resultado.matched).toBe(1); // usa la cache tal cual, sin refrescar
+  });
+
+  // Minor #3: el corte es "menos de 250 m" en sentido estricto (>=, no >).
+  it('a exactamente 250 m no sustituye: el corte es estrictamente "menos de 250 m"', () => {
+    const cache = cacheCon([{ lat: norteHaversine(38.4, OSM_MATCH_MAX_M), lng: -0.6 }]);
+
+    const { matched, tooFar } = matchOsmCameras([dgt], cache);
+
+    expect(matched).toBe(0);
+    expect(tooFar).toBe(1);
+  });
+
+  it('un metro por debajo de 250 m si sustituye', () => {
+    const cache = cacheCon([{ lat: norteHaversine(38.4, OSM_MATCH_MAX_M - 1), lng: -0.6 }]);
+
+    const { matched } = matchOsmCameras([dgt], cache);
+
+    expect(matched).toBe(1);
+  });
+
+  // Minor #4: un 429/504 de Overpass abandona el resto de celdas de esta vuelta, sin reintentar.
+  it('un 429/504 de Overpass abandona las celdas restantes de esta vuelta, sin martillear', async () => {
+    const previa = cacheCon([{ lat: 38.41, lng: -0.61 }]);
+    const consultadas: string[] = [];
+    const resultado = await refreshOsmCameras({
+      cells: ['38_-1', '40_-4', '41_-2'],
+      cache: previa,
+      now: new Date('2026-09-17T04:02:00.000Z'),
+      fetchCell: async (cell) => {
+        consultadas.push(cell);
+        if (cell === '40_-4') throw new OverpassAbortError('HTTP 429');
+        return [{ lat: 40.41, lng: -3.71 }];
+      },
+    });
+
+    // Nunca llega a pedir la tercera celda.
+    expect(consultadas).toEqual(['38_-1', '40_-4']);
+    expect(resultado.queried).toBe(1);
+    expect(resultado.failed).toBe(1);
+    // La primera celda si se refresco antes del 429; la tercera ni se toco (no habia entrada previa).
+    expect(resultado.cache.cells['38_-1']).toEqual([{ lat: 40.41, lng: -3.71 }]);
+    expect(resultado.cache.cells['41_-2']).toBeUndefined();
+  });
+
+  it('un error normal (no 429/504) solo descarta su propia celda, las demas siguen', async () => {
+    const consultadas: string[] = [];
+    const resultado = await refreshOsmCameras({
+      cells: ['38_-1', '40_-4'],
+      cache: emptyOsmCameraCache(),
+      now: new Date('2026-09-17T04:02:00.000Z'),
+      fetchCell: async (cell) => {
+        consultadas.push(cell);
+        if (cell === '38_-1') throw new Error('HTTP 500');
+        return [{ lat: 40.41, lng: -3.71 }];
+      },
+    });
+
+    expect(consultadas).toEqual(['38_-1', '40_-4']);
+    expect(resultado.queried).toBe(1);
+    expect(resultado.failed).toBe(1);
+  });
+
+  // Minor #5: metersBetween usa haversine de verdad (radio 6.371.000 m), no una proyeccion plana.
+  it('metersBetween usa haversine: un grado de latitud en el ecuador son ~111.195 km', () => {
+    const d = metersBetween(0, 0, 1, 0);
+    // La proyeccion plana anterior (con el M_PER_DEG_LAT de la app, 111.320 m) habria dado 111320.
+    expect(d).toBeCloseTo(111194.93, -2);
+  });
+
+  it('metersBetween aplica el termino cos(lat): un grado de longitud a 60 N son ~55.597 km', () => {
+    const d = metersBetween(60, 0, 60, 1);
+    expect(d).toBeCloseTo(55596.93, -2);
   });
 });

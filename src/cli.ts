@@ -23,16 +23,15 @@ import { collectTraces, pendingTraceKm, updateTraces, userSites, type UserTraffi
 import { isDailyMaintenanceWindow } from './schedule.ts';
 import {
   OSM_CACHE_PATH,
+  OSM_MATCH_MAX_M,
   OSM_QUERY_TIMEOUT_MS,
   OVERPASS_ENDPOINT,
-  cellsWithRadares,
+  OverpassAbortError,
   emptyOsmCameraCache,
-  matchOsmCameras,
-  osmCacheIsStale,
   overpassCamerasQuery,
   parseOsmCameraCache,
   parseOverpassCameras,
-  refreshOsmCameras,
+  refreshAndMatchOsmCameras,
   type OsmCamera,
   type OsmCameraCache,
 } from './osm-cameras.ts';
@@ -170,7 +169,14 @@ async function loadOsmCameraCache(): Promise<OsmCameraCache> {
   }
 }
 
-/** Los nodos `highway=speed_camera` de una celda, con el User-Agent propio y 20 s de tiempo limite. */
+/**
+ * Los nodos `highway=speed_camera` de una celda, con el User-Agent propio y 20 s de tiempo limite.
+ *
+ * 429/504: Overpass esta saturado. En vez de un `Error` normal (que `refreshOsmCameras` tragaria y
+ * seguiria con la siguiente celda) se lanza [OverpassAbortError], que le dice que abandone TODAS
+ * las celdas que quedan de esta vuelta -no tiene sentido martillear con ~30 consultas mas un
+ * servicio publico que ya esta diciendo que pares (revision de la Task 4, hallazgo Minor #4)-.
+ */
 async function fetchOverpassCameras(cell: string): Promise<OsmCamera[]> {
   const res = await fetch(OVERPASS_ENDPOINT, {
     method: 'POST',
@@ -178,42 +184,52 @@ async function fetchOverpassCameras(cell: string): Promise<OsmCamera[]> {
     body: new URLSearchParams({ data: overpassCamerasQuery(cell) }),
     signal: AbortSignal.timeout(OSM_QUERY_TIMEOUT_MS),
   });
+  if (res.status === 429 || res.status === 504) throw new OverpassAbortError(`HTTP ${res.status}`);
   if (!res.ok) throw new Error(`HTTP ${res.status}`);
   return parseOverpassCameras(await res.text());
 }
 
 /**
  * Cruza los radares de la DGT con los de OpenStreetMap («Mejoras 1», spec §1.4). NUNCA lanza ni
- * bloquea la publicacion: ante cualquier problema devuelve los radares tal cual llegaron.
+ * bloquea la publicacion, y CADA radar publicado lleva `source_position` (revision de la Task 4,
+ * hallazgo Important #2: la version anterior, si `writeFile` fallaba al escribir la cache en disco,
+ * caia por el `catch` exterior y devolvia los radares SIN esa clave en absoluto).
  *
- * El refresco de la cache exige DOS cosas: que tenga mas de siete dias Y que estemos en la ventana
- * diaria de mantenimiento (decision M10 del plan). El workflow corre cada 10 minutos y no commitea
- * nada, asi que sin esa segunda condicion una cache envejecida dispararia ~30 consultas a Overpass
- * cada 10 minutos para siempre. La cache refrescada se escribe en disco; quien ejecute el pipeline
- * en local es quien la commitea (ver README).
+ * El grueso de la logica -refrescar la cache si toca (decision M10: mas de siete dias Y ventana
+ * diaria de mantenimiento) y cruzar- vive en `refreshAndMatchOsmCameras` (osm-cameras.ts), que ya
+ * garantiza que un fallo al escribir en disco no afecta al cruce ya calculado en memoria. Esta
+ * funcion solo aporta la red y el disco de verdad, y el log.
  */
 async function cruzarConOsm(radares: Radar[], now: Date): Promise<Radar[]> {
   if (radares.length === 0) return radares;
   try {
-    let cache = await loadOsmCameraCache();
-    if (osmCacheIsStale(cache, now) && isDailyMaintenanceWindow(now)) {
-      const celdas = cellsWithRadares(radares);
-      const refresco = await refreshOsmCameras({ cells: celdas, cache, now, fetchCell: fetchOverpassCameras });
-      cache = refresco.cache;
-      log(`osm: ${refresco.queried} celdas consultadas a Overpass, ${refresco.failed} fallidas`);
-      if (refresco.queried > 0) {
-        await writeFile(OSM_CACHE_URL, JSON.stringify(cache));
-        log(`osm: cache escrita en ${OSM_CACHE_PATH} (${Object.keys(cache.cells).length} celdas)`);
+    const cache = await loadOsmCameraCache();
+    const resultado = await refreshAndMatchOsmCameras({
+      radares,
+      cache,
+      now,
+      fetchCell: fetchOverpassCameras,
+      writeCache: (c) => writeFile(OSM_CACHE_URL, JSON.stringify(c)),
+    });
+    if (resultado.refreshed) {
+      log(`osm: ${resultado.queried} celdas consultadas a Overpass, ${resultado.failed} fallidas`);
+      if (resultado.cacheWriteError) {
+        log(`osm: no se pudo escribir la cache en disco (${resultado.cacheWriteError}), se sigue con el cruce ya calculado en memoria`);
+      } else if (resultado.queried > 0) {
+        log(`osm: cache escrita en ${OSM_CACHE_PATH}`);
       }
     } else {
       log(`osm: cache del ${cache.updatedAt}, no se consulta Overpass en esta vuelta`);
     }
-    const { radares: cruzados, matched } = matchOsmCameras(radares, cache);
-    log(`radares: ${matched} de ${radares.length} con posicion de OpenStreetMap (source_position=osm)`);
-    return cruzados;
+    log(
+      `radares: ${resultado.matched} cruzados con OpenStreetMap, ${resultado.tooFar} sin camara a menos de ${OSM_MATCH_MAX_M} m, ${resultado.withoutOsmData} sin datos de OSM en su celda (de ${radares.length})`,
+    );
+    return resultado.radares;
   } catch (e) {
+    // Red de seguridad ultima: aunque algo de aqui arriba fallase de forma inesperada, cada radar
+    // publicado tiene que llevar `source_position` igualmente (revision de la Task 4, Important #2).
     log(`osm: fallo en el cruce (${e instanceof Error ? e.message : e}), se publica la posicion de la DGT`);
-    return radares;
+    return radares.map((r) => ({ ...r, source_position: 'dgt' as const }));
   }
 }
 
