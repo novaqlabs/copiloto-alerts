@@ -27,10 +27,12 @@ import {
   OSM_CACHE_PATH,
   OSM_MATCH_MAX_M,
   OSM_QUERY_TIMEOUT_MS,
+  OSM_SPAIN_TIMEOUT_MS,
   OVERPASS_ENDPOINT,
   OverpassAbortError,
   emptyOsmCameraCache,
   overpassCamerasQuery,
+  overpassSpainQuery,
   parseOsmCameraCache,
   parseOverpassCameras,
   refreshAndMatchOsmCameras,
@@ -210,15 +212,50 @@ async function loadOsmCameraCache(source: string | undefined): Promise<OsmCamera
  * servicio publico que ya esta diciendo que pares (revision de la Task 4, hallazgo Minor #4)-.
  */
 async function fetchOverpassCameras(cell: string): Promise<OsmCamera[]> {
-  const res = await fetch(OVERPASS_ENDPOINT, {
+  // Siembra real del 2026-09-17: sin pausa entre celdas, Overpass devolvia 429 a la tercera
+  // consulta y la vuelta abortaba con 2 de ~30 celdas. Una pausa corta entre consultas y UN
+  // reintento tras esperar ante el primer 429 caben de sobra en el presupuesto de 120 s
+  // (OSM_REFRESH_BUDGET_MS); un segundo 429, o un 504, siguen abortando la vuelta entera.
+  if (overpassConsultas > 0) await esperar(OVERPASS_PAUSA_MS);
+  overpassConsultas++;
+  let res = await consultarOverpass(cell);
+  if (res.status === 429) {
+    await esperar(OVERPASS_ESPERA_429_MS);
+    res = await consultarOverpass(cell);
+  }
+  if (res.status === 429 || res.status === 504) throw new OverpassAbortError(`HTTP ${res.status}`);
+  if (!res.ok) throw new Error(`HTTP ${res.status}`);
+  return parseOverpassCameras(await res.text());
+}
+
+/** Consulta nacional única (ver `fetchAll` en osm-cameras.ts): una petición en vez de ~30. */
+async function fetchOverpassSpain(): Promise<OsmCamera[]> {
+  const res = await fetch(process.env.OVERPASS_ENDPOINT ?? OVERPASS_ENDPOINT, {
+    method: 'POST',
+    headers: { 'User-Agent': USER_AGENT, 'Content-Type': 'application/x-www-form-urlencoded' },
+    body: new URLSearchParams({ data: overpassSpainQuery() }),
+    signal: AbortSignal.timeout(OSM_SPAIN_TIMEOUT_MS),
+  });
+  if (!res.ok) throw new Error(`HTTP ${res.status}`);
+  return parseOverpassCameras(await res.text());
+}
+
+const OVERPASS_PAUSA_MS = 1_500;
+const OVERPASS_ESPERA_429_MS = 20_000;
+let overpassConsultas = 0;
+
+function esperar(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+function consultarOverpass(cell: string): Promise<Response> {
+  // OVERPASS_ENDPOINT en el entorno permite sembrar contra un espejo cuando el principal va saturado.
+  return fetch(process.env.OVERPASS_ENDPOINT ?? OVERPASS_ENDPOINT, {
     method: 'POST',
     headers: { 'User-Agent': USER_AGENT, 'Content-Type': 'application/x-www-form-urlencoded' },
     body: new URLSearchParams({ data: overpassCamerasQuery(cell) }),
     signal: AbortSignal.timeout(OSM_QUERY_TIMEOUT_MS),
   });
-  if (res.status === 429 || res.status === 504) throw new OverpassAbortError(`HTTP ${res.status}`);
-  if (!res.ok) throw new Error(`HTTP ${res.status}`);
-  return parseOverpassCameras(await res.text());
 }
 
 /**
@@ -255,6 +292,7 @@ async function cruzarConOsm(
       cache,
       now,
       fetchCell: fetchOverpassCameras,
+      fetchAll: fetchOverpassSpain,
       forceRefresh: forceOsmRefresh,
       writeCache: async (c) => {
         if (forceOsmRefresh) await writeFile(OSM_CACHE_URL, JSON.stringify(c));

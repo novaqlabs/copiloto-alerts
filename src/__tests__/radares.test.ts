@@ -18,6 +18,7 @@ import {
   parseOverpassCameras,
   refreshAndMatchOsmCameras,
   refreshOsmCameras,
+  splitCamerasByCell,
   type OsmCameraCache,
 } from '../osm-cameras.ts';
 import type { Radar } from '../radares.ts';
@@ -479,12 +480,13 @@ describe('ronda 1 de arreglos (revision de la Task 4)', () => {
       },
     });
 
-    // Nunca llega a pedir la tercera celda.
-    expect(consultadas).toEqual(['38_-1', '40_-4']);
-    expect(resultado.queried).toBe(1);
+    // Orden «primero lo que falta en la cache»: 38_-1 ya esta en `previa`, asi que 40_-4 va antes
+    // y su 429 corta la vuelta ahi mismo: ni 41_-2 ni 38_-1 llegan a pedirse.
+    expect(consultadas).toEqual(['40_-4']);
+    expect(resultado.queried).toBe(0);
     expect(resultado.failed).toBe(1);
-    // La primera celda si se refresco antes del 429; la tercera ni se toco (no habia entrada previa).
-    expect(resultado.cache.cells['38_-1']).toEqual([{ lat: 40.41, lng: -3.71 }]);
+    // Sin ninguna celda consultada, la cache previa se devuelve tal cual (38_-1 conserva lo suyo).
+    expect(resultado.cache.cells['38_-1']).toEqual([{ lat: 38.41, lng: -0.61 }]);
     expect(resultado.cache.cells['41_-2']).toBeUndefined();
   });
 
@@ -516,5 +518,65 @@ describe('ronda 1 de arreglos (revision de la Task 4)', () => {
   it('metersBetween aplica el termino cos(lat): un grado de longitud a 60 N son ~55.597 km', () => {
     const d = metersBetween(60, 0, 60, 1);
     expect(d).toBeCloseTo(55596.93, -2);
+  });
+});
+
+// Siembra real del 2026-09-17: Overpass no aguanta ~30 consultas por celda encadenadas; el refresco
+// pasa a UNA consulta nacional (`fetchAll`) repartida en celdas.
+describe('consulta nacional unica (fetchAll)', () => {
+  it('reparte las camaras en las celdas pedidas y deja vacias las que no tienen ninguna', () => {
+    const porCelda = splitCamerasByCell(
+      [{ lat: 40.41, lng: -3.71 }, { lat: 40.9, lng: -3.2 }, { lat: 38.41, lng: -0.61 }, { lat: 60.0, lng: 10.0 }],
+      ['40_-4', '38_-1', '41_-2'],
+    );
+    expect(porCelda['40_-4']).toEqual([{ lat: 40.41, lng: -3.71 }, { lat: 40.9, lng: -3.2 }]);
+    expect(porCelda['38_-1']).toEqual([{ lat: 38.41, lng: -0.61 }]);
+    expect(porCelda['41_-2']).toEqual([]);
+    expect(Object.keys(porCelda)).toHaveLength(3);
+  });
+
+  it('con fetchAll, una sola peticion cubre todas las celdas y no se consulta por celda', async () => {
+    const porCelda: string[] = [];
+    let nacionales = 0;
+    const resultado = await refreshOsmCameras({
+      cells: ['38_-1', '40_-4'],
+      cache: emptyOsmCameraCache(),
+      now: new Date('2026-09-17T04:02:00.000Z'),
+      fetchCell: async (cell) => {
+        porCelda.push(cell);
+        return [];
+      },
+      fetchAll: async () => {
+        nacionales++;
+        return [{ lat: 40.41, lng: -3.71 }];
+      },
+    });
+    expect(nacionales).toBe(1);
+    expect(porCelda).toEqual([]);
+    expect(resultado.queried).toBe(2);
+    expect(resultado.failed).toBe(0);
+    expect(resultado.cache.cells['40_-4']).toEqual([{ lat: 40.41, lng: -3.71 }]);
+    expect(resultado.cache.cells['38_-1']).toEqual([]);
+  });
+
+  it('si la consulta nacional falla, se conserva la cache previa sin pasar al camino por celdas', async () => {
+    const previa: OsmCameraCache = { updatedAt: '2026-09-17T04:00:00.000Z', cells: { '38_-1': [{ lat: 38.41, lng: -0.61 }] } };
+    const porCelda: string[] = [];
+    const resultado = await refreshOsmCameras({
+      cells: ['38_-1', '40_-4'],
+      cache: previa,
+      now: new Date('2026-09-17T04:02:00.000Z'),
+      fetchCell: async (cell) => {
+        porCelda.push(cell);
+        return [];
+      },
+      fetchAll: async () => {
+        throw new Error('HTTP 000');
+      },
+    });
+    expect(porCelda).toEqual([]);
+    expect(resultado.queried).toBe(0);
+    expect(resultado.failed).toBe(1);
+    expect(resultado.cache).toBe(previa);
   });
 });

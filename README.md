@@ -53,7 +53,12 @@ mapeados como nodos `highway=speed_camera` con precisión de metros, así que `s
    de tramo solo se mueve el punto de inicio; `endLat`/`endLng` no se tocan.
 4. El log de publicación cuenta las tres cosas por separado, tal como las imprime `cli.ts`:
    `radares: N cruzados con OpenStreetMap, M sin camara a menos de 250 m, K sin datos de OSM en su celda (de T)`.
-   Medida del controlador: pendiente de sembrar la caché.
+   Medida del controlador (siembra parcial del 2026-09-17, 7 de ~30 celdas cubiertas antes de que
+   Overpass cortara las conexiones por las ráfagas de consultas por celda): `61 cruzados con
+   OpenStreetMap, 3 sin camara a menos de 250 m, 673 sin datos de OSM en su celda (de 737)`. Desde
+   entonces el refresco es UNA consulta nacional (`fetchAll`, toda España en una petición) y la
+   primera vuelta del workflow en su ventana completa la cobertura; el recuento real sale en el log
+   de esa vuelta.
 
 **Cuándo se consulta Overpass.** Solo si la caché tiene **más de 7 días** *Y* la vuelta cae en la
 **ventana diaria de mantenimiento** (04:00–04:09 UTC, la misma de `report_types` y la limpieza de

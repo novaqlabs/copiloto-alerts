@@ -128,6 +128,33 @@ export function overpassCamerasQuery(cell: string): string {
 }
 
 /** Los nodos con coordenadas de una respuesta de Overpass; lista vacía ante cualquier sorpresa. */
+/** Caja de toda España (península, Baleares y Canarias) para la consulta nacional única. */
+export const OSM_SPAIN_BBOX = { sur: 27.5, oeste: -18.5, norte: 44.0, este: 4.5 };
+/** Tiempo límite de la consulta nacional: una sola petición, cabe de sobra en el presupuesto. */
+export const OSM_SPAIN_TIMEOUT_MS = 90_000;
+
+/** Una única consulta con todos los nodos `highway=speed_camera` de España (ver `fetchAll`). */
+export function overpassSpainQuery(): string {
+  const { sur, oeste, norte, este } = OSM_SPAIN_BBOX;
+  const segundos = Math.round(OSM_SPAIN_TIMEOUT_MS / 1000);
+  return `[out:json][timeout:${segundos}];node["highway"="speed_camera"](${sur},${oeste},${norte},${este});out skel qt;`;
+}
+
+/**
+ * Reparte las cámaras de la consulta nacional en las celdas pedidas (las mismas claves que
+ * [cellsWithRadares]); una celda pedida sin cámaras queda como lista vacía, que para el cruce
+ * significa «consultada y sin cámara cerca», no «sin datos».
+ */
+export function splitCamerasByCell(cameras: OsmCamera[], cells: string[]): Record<string, OsmCamera[]> {
+  const out: Record<string, OsmCamera[]> = {};
+  for (const cell of cells) out[cell] = [];
+  for (const camera of cameras) {
+    const cell = cellOf(camera.lat, camera.lng);
+    if (cell in out) out[cell].push(camera);
+  }
+  return out;
+}
+
 export function parseOverpassCameras(body: string): OsmCamera[] {
   let raw: unknown;
   try {
@@ -157,6 +184,14 @@ export interface RefreshOsmCamerasInput {
   now: Date;
   /** Devuelve los nodos de una celda; lanza si la consulta falla (HTTP, tiempo límite, JSON raro). */
   fetchCell: (cell: string) => Promise<OsmCamera[]>;
+  /**
+   * Si existe, UNA sola consulta con todas las cámaras del país ([overpassSpainQuery]) sustituye a
+   * las ~30 consultas por celda: la siembra real del 2026-09-17 demostró que Overpass devuelve 429
+   * o agota los 10 s por celda en cuanto se encadenan unas pocas, y una consulta nacional de
+   * `highway=speed_camera` pesa menos de 1 MB. Si falla, la vuelta se queda con la caché previa
+   * (no se dispara el camino por celdas: sería martillear a un servidor que ya ha fallado).
+   */
+  fetchAll?: () => Promise<OsmCamera[]>;
   /**
    * Reloj de pared para [OSM_REFRESH_BUDGET_MS] (item 8 del repaso final): milisegundos desde
    * cualquier origen fijo, inyectable para los tests -nunca `Date.now` de verdad en ellos-. Por
@@ -202,7 +237,24 @@ export async function refreshOsmCameras(
   let queried = 0;
   let failed = 0;
   let budgetExceeded = false;
-  for (const cell of input.cells) {
+  if (input.fetchAll) {
+    try {
+      const todas = await input.fetchAll();
+      const porCelda = splitCamerasByCell(todas, input.cells);
+      for (const cell of input.cells) cells[cell] = porCelda[cell] ?? [];
+      queried = input.cells.length;
+    } catch {
+      failed = 1;
+    }
+    if (queried === 0) return { cache: input.cache, queried, failed, budgetExceeded };
+    return { cache: { updatedAt: input.now.toISOString(), cells }, queried, failed, budgetExceeded };
+  }
+  // Primero las celdas que la cache aun no tiene: con Overpass lento, cada vuelta agota el
+  // presupuesto tras unas pocas consultas, y si el orden fuera siempre el mismo las celdas del
+  // final nunca llegarian a entrar (siembra real del 2026-09-17: 5 celdas por vuelta). Asi cada
+  // vuelta avanza sobre lo que falta y solo despues refresca lo que ya habia.
+  const orden = [...input.cells].sort((a, b) => Number(a in cells) - Number(b in cells));
+  for (const cell of orden) {
     if (clockMs() - startMs >= OSM_REFRESH_BUDGET_MS) {
       budgetExceeded = true;
       break;
@@ -294,6 +346,14 @@ export interface RefreshAndMatchOsmCamerasInput {
   now: Date;
   fetchCell: (cell: string) => Promise<OsmCamera[]>;
   /**
+   * Si existe, UNA sola consulta con todas las cámaras del país ([overpassSpainQuery]) sustituye a
+   * las ~30 consultas por celda: la siembra real del 2026-09-17 demostró que Overpass devuelve 429
+   * o agota los 10 s por celda en cuanto se encadenan unas pocas, y una consulta nacional de
+   * `highway=speed_camera` pesa menos de 1 MB. Si falla, la vuelta se queda con la caché previa
+   * (no se dispara el camino por celdas: sería martillear a un servidor que ya ha fallado).
+   */
+  fetchAll?: () => Promise<OsmCamera[]>;
+  /**
    * Persiste la caché refrescada en disco. Un fallo aquí NUNCA debe impedir el cruce: ver la nota
    * de [refreshAndMatchOsmCameras] (revisión de la Task 4, hallazgo Important #2).
    */
@@ -376,6 +436,7 @@ export async function refreshAndMatchOsmCameras(
       cache,
       now: input.now,
       fetchCell: input.fetchCell,
+      fetchAll: input.fetchAll,
       clockMs: input.clockMs,
     });
     cache = refresco.cache;
