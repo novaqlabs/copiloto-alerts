@@ -39,30 +39,49 @@ del poste: en carretera los avisos llegaban unos 100 m desplazados. OpenStreetMa
 mapeados como nodos `highway=speed_camera` con precisión de metros, así que `src/osm-cameras.ts`:
 
 1. Agrupa los radares por celda de un grado (`cellsWithRadares`) y pide a **Overpass** los nodos
-   `highway=speed_camera` de cada caja, ensanchada 0,01° (~1,1 km), con `[out:json][timeout:20]`,
-   `User-Agent` propio y **una consulta por celda, en serie**.
-2. Guarda el resultado en `data/osm-cameras.json` (`{ updatedAt, cells }`), que **está commiteado**.
+   `highway=speed_camera` de cada caja, ensanchada 0,01° (~1,1 km), con `[out:json][timeout:10]`,
+   `User-Agent` propio y **una consulta por celda, en serie**, con un presupuesto agregado de
+   **120 s por vuelta** (`OSM_REFRESH_BUDGET_MS`): agotado, las celdas que faltan se quedan con lo
+   que ya hubiera en caché (o sin datos, que se resuelve con la posición de la DGT) y la
+   publicación sigue igual.
+2. Guarda el resultado en la caché (`{ updatedAt, cells }`) y la publica en `out/osm-cameras.json`
+   -en **cada** vuelta, refresque o no- para que el propio GitHub Pages sea la fuente de la
+   siguiente lectura (ver más abajo); `data/osm-cameras.json`, commiteado en el repo, es solo la
+   **semilla** de respaldo para cuando esa publicación todavía no existe o no se puede descargar.
 3. Para cada radar busca el nodo más cercano de su celda: si está a menos de **250 m**, publica esa
    posición y marca `source_position: "osm"`; si no, deja la de la DGT y marca `"dgt"`. En un radar
    de tramo solo se mueve el punto de inicio; `endLat`/`endLng` no se tocan.
-4. El log de publicación dice cuántos casaron:
-   `radares: 412 de 764 con posicion de OpenStreetMap (source_position=osm)`.
+4. El log de publicación cuenta las tres cosas por separado, tal como las imprime `cli.ts`:
+   `radares: N cruzados con OpenStreetMap, M sin camara a menos de 250 m, K sin datos de OSM en su celda (de T)`.
+   Medida del controlador: pendiente de sembrar la caché.
 
-**Cuándo se consulta Overpass.** Solo si la caché tiene **más de 7 días** *y* la vuelta cae en la
+**Cuándo se consulta Overpass.** Solo si la caché tiene **más de 7 días** *Y* la vuelta cae en la
 **ventana diaria de mantenimiento** (04:00–04:09 UTC, la misma de `report_types` y la limpieza de
-trazas). El workflow corre cada 10 minutos y no commitea nada, así que sin esa segunda condición una
-caché envejecida saldría a Overpass ~4.300 veces al día. Fuera de la ventana se usa la caché tal
-cual. **Nada de esto bloquea la publicación**: cualquier fallo (Overpass caído, 429, tiempo límite,
-caché ilegible) se anota en el log y los radares salen con la posición de la DGT.
+trazas) -las dos condiciones a la vez, no basta con una sola-, o si se pasa `--refresh-osm-cache`
+(más abajo), que salta ambas. El workflow corre cada 10 minutos, así que sin esa segunda condición
+una caché envejecida saldría a Overpass ~4.300 veces al día. Fuera de la ventana (y sin el flag) se
+usa la caché tal cual. **Nada de esto bloquea la publicación**: cualquier fallo (Overpass caído,
+429, tiempo límite, caché ilegible, presupuesto agotado) se anota en el log y los radares salen con
+la posición de la DGT.
 
-**Cómo se actualiza la caché commiteada.** La vuelta que refresca escribe `data/osm-cameras.json` en
-disco, pero el workflow de GitHub Actions no puede commitearlo (`permissions: contents: read`). Para
-guardar el refresco, ejecuta el pipeline en local en la ventana diaria —o borra la fecha de
-`updatedAt` a mano para forzarlo— y commitea el fichero resultante:
+**Cómo se mantiene la caché sin depender de commits.** Al arrancar, el pipeline descarga su propia
+publicación anterior (`out/osm-cameras.json` del Pages, variable `PREV_OSM_CAMERAS` -mismo patrón
+que `PREV_META`/`PREV_ESTADO`, por defecto
+`https://novaqlabs.github.io/copiloto-alerts/osm-cameras.json`-); si la descarga falla (todavía no
+se ha publicado nunca, la CDN devuelve 404, el JSON está roto) cae al fichero semilla del repo
+(`data/osm-cameras.json`). Tras refrescar en su ventana, la caché se vuelve a publicar en
+`out/osm-cameras.json` -en cada vuelta, no solo cuando refresca de verdad, porque `deploy-pages`
+sustituye el sitio entero cada vez-. El runner de GitHub Actions nunca commitea nada
+(`permissions: contents: read`): la caché vive en la propia publicación de Pages, de un día para
+otro.
+
+Para **sembrar la caché en local** (primera vez, o si se quiere refrescar sin esperar a la ventana
+diaria), `--refresh-osm-cache` fuerza el refresco ignorando antigüedad y ventana y escribe el
+resultado tanto en `out/` como en `data/osm-cameras.json`:
 
 ```bash
 cd copiloto-alerts
-node src/cli.ts run --out out --skip-supabase
+node src/cli.ts run --out out --skip-supabase --refresh-osm-cache
 git add data/osm-cameras.json
 ```
 
@@ -151,6 +170,9 @@ El workflow descarga además `trafico/estado.json` del Pages anterior (`PREV_EST
 `--prev-estado`: es el acumulado de referencias y perfiles horarios. Si falta (primera ejecución) o
 la descarga falla, se parte de cero y el estado se reconstruye solo en unos días.
 
+Mismo patrón para la caché de OSM (`PREV_OSM_CAMERAS`, pasada con `--prev-osm-cameras`): ver
+«Posición de los radares» más arriba.
+
 Secreto necesario en el repositorio de GitHub: `SUPABASE_SECRET_KEY`.
 
 ### En local
@@ -186,8 +208,12 @@ Flags: `--out <dir>` (por defecto `out`), `--skip-supabase` (omite la sincroniza
 credenciales), `--radares <url|fichero>` y `--incidencias <url|fichero>` (si la ruta existe en
 disco se lee el fichero, si no se trata como URL con `AbortSignal.timeout(60_000)` y un
 reintento tras 10 s), `--prev-meta <url|fichero>` (para recuperar el `fetchedAt` anterior si una
-fuente falla). Si fallan las dos fuentes, el CLI sale con código 4 y no publica nada; si falla
-solo una, publica la otra y dejan constancia del fallo en `meta.json#sources`.
+fuente falla), `--prev-osm-cameras <url|fichero>` (publicación previa de la caché de OSM; por
+defecto `https://novaqlabs.github.io/copiloto-alerts/osm-cameras.json`) y `--refresh-osm-cache`
+(fuerza el refresco de la caché de OSM ignorando antigüedad y ventana diaria, y la siembra también
+en `data/osm-cameras.json`; ver «Posición de los radares» más arriba). Si fallan las dos fuentes,
+el CLI sale con código 4 y no publica nada; si falla solo una, publica la otra y dejan constancia
+del fallo en `meta.json#sources`.
 
 `fixtures/radares.xml` y `fixtures/incidencias.xml` son descargas reales de los feeds del NAP,
 usadas para validar los parsers contra la estructura real de la DGT (no ejemplos simplificados).

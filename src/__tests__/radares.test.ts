@@ -5,6 +5,8 @@ import {
   OSM_BBOX_MARGIN_DEG,
   OSM_CACHE_MAX_AGE_DAYS,
   OSM_MATCH_MAX_M,
+  OSM_QUERY_TIMEOUT_MS,
+  OSM_REFRESH_BUDGET_MS,
   OverpassAbortError,
   cellsWithRadares,
   emptyOsmCameraCache,
@@ -141,10 +143,16 @@ describe('cruce con los radares de OpenStreetMap', () => {
     expect(OSM_CACHE_MAX_AGE_DAYS).toBe(7);
   });
 
+  // Item 8 del repaso final («Mejoras 1»): 10 s por celda, 120 s de presupuesto agregado por vuelta.
+  it('los topes de tiempo del presupuesto agregado son los del repaso final', () => {
+    expect(OSM_QUERY_TIMEOUT_MS).toBe(10_000);
+    expect(OSM_REFRESH_BUDGET_MS).toBe(120_000);
+  });
+
   it('la consulta pide nodos highway=speed_camera en la caja de la celda, con margen', () => {
     const query = overpassCamerasQuery('38_-1');
 
-    expect(query).toContain('[out:json][timeout:20]');
+    expect(query).toContain('[out:json][timeout:10]');
     expect(query).toContain('node["highway"="speed_camera"]');
     // Celda 38_-1 => caja (38, -1) a (39, 0), ensanchada OSM_BBOX_MARGIN_DEG por cada lado.
     const sur = (38 - OSM_BBOX_MARGIN_DEG).toFixed(4);
@@ -249,6 +257,45 @@ describe('cruce con los radares de OpenStreetMap', () => {
     expect(resultado.failed).toBe(1);
     expect(resultado.cache).toEqual(previa);
   });
+
+  // Item 8 del repaso final («Mejoras 1», Important I2 del informe original): presupuesto agregado
+  // de 120 s por vuelta, con reloj y fetch simulados -nunca `Date.now`/red de verdad-.
+  it('agotado el presupuesto de 120 s, las celdas restantes no se consultan', async () => {
+    let elapsedMs = 0;
+    const consultadas: string[] = [];
+    const resultado = await refreshOsmCameras({
+      cells: ['38_-1', '40_-4', '41_-2'],
+      cache: emptyOsmCameraCache(),
+      now: new Date('2026-09-17T04:02:00.000Z'),
+      clockMs: () => elapsedMs,
+      fetchCell: async (cell) => {
+        consultadas.push(cell);
+        // Cada consulta "tarda" 70 s simulados: la tercera celda ya no cabe en los 120 s del
+        // presupuesto (70 + 70 = 140 >= 120), asi que ni se pide.
+        elapsedMs += 70_000;
+        return [{ lat: 38.41, lng: -0.61 }];
+      },
+    });
+
+    expect(consultadas).toEqual(['38_-1', '40_-4']);
+    expect(resultado.queried).toBe(2);
+    expect(resultado.failed).toBe(0);
+    expect(resultado.budgetExceeded).toBe(true);
+    expect(resultado.cache.cells['41_-2']).toBeUndefined();
+  });
+
+  it('dentro del presupuesto se consultan todas las celdas y budgetExceeded es false', async () => {
+    const resultado = await refreshOsmCameras({
+      cells: ['38_-1', '40_-4'],
+      cache: emptyOsmCameraCache(),
+      now: new Date('2026-09-17T04:02:00.000Z'),
+      clockMs: () => 0,
+      fetchCell: async () => [{ lat: 38.41, lng: -0.61 }],
+    });
+
+    expect(resultado.queried).toBe(2);
+    expect(resultado.budgetExceeded).toBe(false);
+  });
 });
 
 describe('ronda 1 de arreglos (revision de la Task 4)', () => {
@@ -347,6 +394,56 @@ describe('ronda 1 de arreglos (revision de la Task 4)', () => {
     expect(fetchCalls).toBe(0);
     expect(writeCalls).toBe(0);
     expect(resultado.matched).toBe(1); // usa la cache tal cual, sin refrescar
+  });
+
+  // Item 10 del repaso final («Mejoras 1», Minor m5 del informe original): la mitad de M10 que de
+  // verdad protege a Overpass de ~4.300 consultas al dia -caducada Y ventana son un Y, no basta con
+  // que la cache este vieja si la vuelta cae fuera de las 04:00-04:09 UTC-.
+  it('con la cache caducada pero fuera de la ventana diaria, refreshAndMatchOsmCameras tampoco toca la red', async () => {
+    let fetchCalls = 0;
+    let writeCalls = 0;
+    const resultado = await refreshAndMatchOsmCameras({
+      radares: [dgt],
+      cache: emptyOsmCameraCache(), // updatedAt de 1970: caducada de sobra
+      now: new Date('2026-09-17T12:00:00.000Z'), // fuera de la ventana 04:00-04:09 UTC
+      fetchCell: async () => {
+        fetchCalls++;
+        return [{ lat: norte(38.4, 120), lng: -0.6 }];
+      },
+      writeCache: async () => {
+        writeCalls++;
+      },
+    });
+
+    expect(resultado.refreshed).toBe(false);
+    expect(fetchCalls).toBe(0);
+    expect(writeCalls).toBe(0);
+    expect(resultado.matched).toBe(0); // sin cache no hay con que cruzar: se publica la posicion de la DGT
+  });
+
+  // Item 7 del repaso final: `forceRefresh` (la opcion de CLI `--refresh-osm-cache`) salta las DOS
+  // condiciones -ni hace falta que la cache este caducada ni que sea la ventana diaria-.
+  it('forceRefresh consulta la red aunque la cache este al dia y fuera de la ventana diaria', async () => {
+    let fetchCalls = 0;
+    const cache = cacheCon([]); // updatedAt reciente: no caducada
+    const resultado = await refreshAndMatchOsmCameras({
+      radares: [dgt],
+      cache,
+      now: new Date('2026-09-17T12:00:00.000Z'), // fuera de la ventana 04:00-04:09 UTC
+      forceRefresh: true,
+      fetchCell: async () => {
+        fetchCalls++;
+        return [{ lat: norte(38.4, 120), lng: -0.6 }];
+      },
+      writeCache: async () => {},
+    });
+
+    expect(resultado.refreshed).toBe(true);
+    expect(fetchCalls).toBe(1);
+    expect(resultado.matched).toBe(1);
+    // El campo `cache` del resultado es la EFECTIVAMENTE usada (item 7: `cli.ts` la publica en
+    // `out/osm-cameras.json` en cada vuelta, refresque o no).
+    expect(resultado.cache.cells['38_-1']).toEqual([{ lat: norte(38.4, 120), lng: -0.6 }]);
   });
 
   // Minor #3: el corte es "menos de 250 m" en sentido estricto (>=, no >).

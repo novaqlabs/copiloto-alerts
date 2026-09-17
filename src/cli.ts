@@ -4,6 +4,7 @@
  *   node src/cli.ts run --out <dir> [--skip-supabase] [--radares <url|fichero>] [--incidencias <url|fichero>]
  *                       [--detectores-medidas <url|fichero>] [--detectores-ubicaciones <url|fichero>]
  *                       [--prev-meta <url|fichero>] [--prev-estado <url|fichero>]
+ *                       [--prev-osm-cameras <url|fichero>] [--refresh-osm-cache]
  *
  * Variables de entorno (solo se leen en GitHub Actions; nunca hardcodeadas):
  *   SUPABASE_URL, SUPABASE_SECRET_KEY
@@ -13,7 +14,8 @@
  * https://nap.dgt.es/dataset/incidencias-dgt-datex2-v3-7
  */
 import { existsSync } from 'node:fs';
-import { readFile, writeFile } from 'node:fs/promises';
+import { readFile, writeFile, mkdir } from 'node:fs/promises';
+import { dirname, join } from 'node:path';
 import { loadCatalogo, validateCatalogo } from './catalogo.ts';
 import { parseRadares, type Radar } from './radares.ts';
 import { parseIncidencias, type Incidencia } from './incidencias.ts';
@@ -157,20 +159,50 @@ function supabaseEnvFromProcess(): SupabaseEnv | undefined {
   return url && secretKey ? { url, secretKey } : undefined;
 }
 
-/** Ruta de la caché de OSM, resuelta desde ESTE fichero (`src/`), no desde el cwd. */
+/**
+ * Ruta de la SEMILLA local de la caché de OSM, resuelta desde ESTE fichero (`src/`), no desde el
+ * cwd: `data/osm-cameras.json`, commiteada en el repo como respaldo (item 7 del repaso final) y
+ * como destino de `--refresh-osm-cache` para sembrarla en local.
+ */
 const OSM_CACHE_URL = new URL('../data/osm-cameras.json', import.meta.url);
 
-async function loadOsmCameraCache(): Promise<OsmCameraCache> {
+/**
+ * Publicación por defecto de `PREV_OSM_CAMERAS` (item 7 del repaso final): la caché de la vuelta
+ * anterior en el Pages propio, mismo patrón que `PREV_META`/`PREV_ESTADO`
+ * (`.github/workflows/alerts.yml`).
+ */
+const DEFAULT_PREV_OSM_CAMERAS_URL = 'https://novaqlabs.github.io/copiloto-alerts/osm-cameras.json';
+
+/**
+ * Carga la caché de OSM SIN depender de que nadie la commitee a mano (item 7 del repaso final,
+ * Important I1 del informe original): primero intenta [source] -la publicación propia de
+ * `out/osm-cameras.json` en GitHub Pages, `PREV_OSM_CAMERAS`, mismo patrón que
+ * `loadPrevMeta`/`loadPrevEstado`, URL o fichero local según [existsSync]-; si la descarga falla o
+ * el JSON no tiene la forma esperada (primera vez que se publica, CDN con 404, caché truncada) cae
+ * al fichero SEMILLA del repo ([OSM_CACHE_URL]) como respaldo.
+ */
+async function loadOsmCameraCache(source: string | undefined): Promise<OsmCameraCache> {
+  if (source) {
+    try {
+      const text = existsSync(source) ? await readFile(source, 'utf8') : await fetchOnce(source);
+      const cache = parseOsmCameraCache(text);
+      if (cache) return cache;
+      log('osm: la publicacion previa no tiene el formato esperado, se usa la semilla del repo');
+    } catch (e) {
+      log(`osm: no se pudo leer la publicacion previa (${e instanceof Error ? e.message : e}), se usa la semilla del repo`);
+    }
+  }
   try {
     return parseOsmCameraCache(await readFile(OSM_CACHE_URL, 'utf8')) ?? emptyOsmCameraCache();
   } catch (e) {
-    log(`osm: no se pudo leer la cache (${e instanceof Error ? e.message : e}), se parte de cero`);
+    log(`osm: no se pudo leer la semilla del repo (${e instanceof Error ? e.message : e}), se parte de cero`);
     return emptyOsmCameraCache();
   }
 }
 
 /**
- * Los nodos `highway=speed_camera` de una celda, con el User-Agent propio y 20 s de tiempo limite.
+ * Los nodos `highway=speed_camera` de una celda, con el User-Agent propio y el mismo tiempo limite
+ * por celda que el presupuesto agregado usa como unidad ([OSM_QUERY_TIMEOUT_MS], item 8).
  *
  * 429/504: Overpass esta saturado. En vez de un `Error` normal (que `refreshOsmCameras` tragaria y
  * seguiria con la siguiente celda) se lanza [OverpassAbortError], que le dice que abandone TODAS
@@ -196,27 +228,59 @@ async function fetchOverpassCameras(cell: string): Promise<OsmCamera[]> {
  * caia por el `catch` exterior y devolvia los radares SIN esa clave en absoluto).
  *
  * El grueso de la logica -refrescar la cache si toca (decision M10: mas de siete dias Y ventana
- * diaria de mantenimiento) y cruzar- vive en `refreshAndMatchOsmCameras` (osm-cameras.ts), que ya
- * garantiza que un fallo al escribir en disco no afecta al cruce ya calculado en memoria. Esta
- * funcion solo aporta la red y el disco de verdad, y el log.
+ * diaria de mantenimiento, o [forceOsmRefresh]) y cruzar, con presupuesto agregado de 120 s (item
+ * 8)- vive en `refreshAndMatchOsmCameras` (osm-cameras.ts), que ya garantiza que un fallo al
+ * escribir en disco no afecta al cruce ya calculado en memoria. Esta funcion aporta la red y el
+ * disco de verdad, y el log.
+ *
+ * `out/osm-cameras.json` se escribe SIEMPRE, refresque o no esta vuelta (item 7): el deploy de
+ * GitHub Pages sustituye el sitio entero en cada `deploy-pages`, asi que si solo se escribiera en
+ * las vueltas que refrescan, la caché desaparecería de la publicación en la primera vuelta que no
+ * lo hiciera -y la vuelta de mañana, que la lee de ahi mismo (`PREV_OSM_CAMERAS`), se quedaría sin
+ * nada-. El fichero SEMILLA del repo ([OSM_CACHE_URL]) solo se reescribe con [forceOsmRefresh]
+ * (`--refresh-osm-cache`, pensada para que el controlador la siembre en local).
  */
-async function cruzarConOsm(radares: Radar[], now: Date): Promise<Radar[]> {
+async function cruzarConOsm(
+  radares: Radar[],
+  now: Date,
+  outDir: string,
+  prevOsmCamerasSource: string | undefined,
+  forceOsmRefresh: boolean,
+): Promise<Radar[]> {
   if (radares.length === 0) return radares;
   try {
-    const cache = await loadOsmCameraCache();
+    const cache = await loadOsmCameraCache(prevOsmCamerasSource);
     const resultado = await refreshAndMatchOsmCameras({
       radares,
       cache,
       now,
       fetchCell: fetchOverpassCameras,
-      writeCache: (c) => writeFile(OSM_CACHE_URL, JSON.stringify(c)),
+      forceRefresh: forceOsmRefresh,
+      writeCache: async (c) => {
+        if (forceOsmRefresh) await writeFile(OSM_CACHE_URL, JSON.stringify(c));
+      },
     });
+
+    // En su propio try/catch: un fallo aqui (disco lleno, permisos) no puede tirar por el `catch`
+    // exterior y perder el cruce YA calculado -mismo motivo que el `cacheWriteError` interno de
+    // `refreshAndMatchOsmCameras` (revision de la Task 4, Important #2)-.
+    const outPath = join(outDir, 'osm-cameras.json');
+    try {
+      await mkdir(dirname(outPath), { recursive: true });
+      await writeFile(outPath, JSON.stringify(resultado.cache));
+    } catch (e) {
+      log(`osm: no se pudo escribir out/osm-cameras.json (${e instanceof Error ? e.message : e}), la publicacion de Pages se queda sin la cache esta vuelta`);
+    }
+
     if (resultado.refreshed) {
-      log(`osm: ${resultado.queried} celdas consultadas a Overpass, ${resultado.failed} fallidas`);
+      const presupuesto = resultado.budgetExceeded
+        ? ' (presupuesto de 120 s agotado, el resto sigue con la cache o la posicion de la DGT)'
+        : '';
+      log(`osm: ${resultado.queried} celdas consultadas a Overpass, ${resultado.failed} fallidas${presupuesto}`);
       if (resultado.cacheWriteError) {
-        log(`osm: no se pudo escribir la cache en disco (${resultado.cacheWriteError}), se sigue con el cruce ya calculado en memoria`);
+        log(`osm: no se pudo escribir la semilla en ${OSM_CACHE_PATH} (${resultado.cacheWriteError}), se sigue con el cruce ya calculado en memoria`);
       } else if (resultado.queried > 0) {
-        log(`osm: cache escrita en ${OSM_CACHE_PATH}`);
+        log(`osm: cache escrita en out/osm-cameras.json${forceOsmRefresh ? ` y sembrada en ${OSM_CACHE_PATH}` : ''}`);
       }
     } else {
       log(`osm: cache del ${cache.updatedAt}, no se consulta Overpass en esta vuelta`);
@@ -241,6 +305,11 @@ async function run(): Promise<void> {
   const ubicacionesSource = arg('detectores-ubicaciones', DEFAULT_DETECTORES_UBICACIONES_URL)!;
   const prevMetaSource = arg('prev-meta');
   const prevEstadoSource = arg('prev-estado');
+  // Item 7 del repaso final: a diferencia de `prev-meta`/`prev-estado`, esta SI tiene un valor por
+  // defecto en el propio codigo (no solo en el `env` del workflow) para que `--refresh-osm-cache`
+  // en local -sin pasar por `alerts.yml`- tambien la use.
+  const prevOsmCamerasSource = arg('prev-osm-cameras', DEFAULT_PREV_OSM_CAMERAS_URL);
+  const forceOsmRefresh = has('refresh-osm-cache');
   const skipSupabase = has('skip-supabase');
   const now = new Date();
 
@@ -286,7 +355,7 @@ async function run(): Promise<void> {
     log(`radares: ${radares.length} registros`);
     // «Mejoras 1» (spec §1.4): la posicion de OSM cuando la hay. No bloquea la publicacion: si algo
     // falla, `cruzarConOsm` devuelve los radares tal cual y la vuelta sigue.
-    radares = await cruzarConOsm(radares, now);
+    radares = await cruzarConOsm(radares, now, outDir, prevOsmCamerasSource, forceOsmRefresh);
   }
 
   let incidencias: Incidencia[] = [];

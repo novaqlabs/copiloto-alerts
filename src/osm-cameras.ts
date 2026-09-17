@@ -41,8 +41,19 @@ export const OSM_MATCH_MAX_M = 250;
 /** A partir de esta edad, la caché se refresca (spec §2). */
 export const OSM_CACHE_MAX_AGE_DAYS = 7;
 
-/** Tiempo límite de cada consulta a Overpass (spec §2). */
-export const OSM_QUERY_TIMEOUT_MS = 20_000;
+/** Tiempo límite de cada consulta a Overpass (repaso final de «Mejoras 1», Important I2/item 8). */
+export const OSM_QUERY_TIMEOUT_MS = 10_000;
+
+/**
+ * Presupuesto de pared para el CONJUNTO de consultas a Overpass de una vuelta (repaso final de
+ * «Mejoras 1», Important I2/item 8): con ~30 celdas en serie y 10 s de tope por consulta el peor
+ * caso son 300 s, muy por encima de lo que el job del workflow puede permitirse sin dejar sin
+ * publicar radares, incidencias y tráfico (`cruzarConOsm` se llama ANTES de `buildOutputs`).
+ * Agotados los 120 s, las celdas que faltan se quedan con lo que ya hubiera en la caché -o sin
+ * datos, que [matchOsmCameras] resuelve con la posición de la DGT- y la publicación sigue, igual
+ * que con un [OverpassAbortError].
+ */
+export const OSM_REFRESH_BUDGET_MS = 120_000;
 
 /**
  * Margen con el que se ensancha la caja de cada celda: ~1,1 km, holgadamente más que
@@ -146,6 +157,12 @@ export interface RefreshOsmCamerasInput {
   now: Date;
   /** Devuelve los nodos de una celda; lanza si la consulta falla (HTTP, tiempo límite, JSON raro). */
   fetchCell: (cell: string) => Promise<OsmCamera[]>;
+  /**
+   * Reloj de pared para [OSM_REFRESH_BUDGET_MS] (item 8 del repaso final): milisegundos desde
+   * cualquier origen fijo, inyectable para los tests -nunca `Date.now` de verdad en ellos-. Por
+   * defecto `Date.now`.
+   */
+  clockMs?: () => number;
 }
 
 /**
@@ -169,14 +186,27 @@ export class OverpassAbortError extends Error {}
  * repita mañana- en vez de quedarse vacía por un mal día de Overpass. Un [OverpassAbortError] corta
  * el bucle: las celdas que quedaban ni se piden ni se cuentan como fallidas, simplemente se quedan
  * con lo que ya hubiera en la caché previa.
+ *
+ * Presupuesto agregado (item 8 del repaso final, Important I2): antes de CADA celda se comprueba
+ * si ya se ha gastado [OSM_REFRESH_BUDGET_MS] desde que empezó esta vuelta; si es así, el bucle
+ * sale exactamente igual que con un [OverpassAbortError] -las celdas que faltan ni se piden ni se
+ * cuentan como falladas, se quedan con lo que ya hubiera en la caché previa- y `budgetExceeded`
+ * sale en `true` para que quien llama lo pueda anotar en el log.
  */
 export async function refreshOsmCameras(
   input: RefreshOsmCamerasInput,
-): Promise<{ cache: OsmCameraCache; queried: number; failed: number }> {
+): Promise<{ cache: OsmCameraCache; queried: number; failed: number; budgetExceeded: boolean }> {
   const cells: Record<string, OsmCamera[]> = { ...input.cache.cells };
+  const clockMs = input.clockMs ?? Date.now;
+  const startMs = clockMs();
   let queried = 0;
   let failed = 0;
+  let budgetExceeded = false;
   for (const cell of input.cells) {
+    if (clockMs() - startMs >= OSM_REFRESH_BUDGET_MS) {
+      budgetExceeded = true;
+      break;
+    }
     try {
       cells[cell] = await input.fetchCell(cell);
       queried++;
@@ -185,8 +215,8 @@ export async function refreshOsmCameras(
       if (e instanceof OverpassAbortError) break;
     }
   }
-  if (queried === 0) return { cache: input.cache, queried, failed };
-  return { cache: { updatedAt: input.now.toISOString(), cells }, queried, failed };
+  if (queried === 0) return { cache: input.cache, queried, failed, budgetExceeded };
+  return { cache: { updatedAt: input.now.toISOString(), cells }, queried, failed, budgetExceeded };
 }
 
 /** Radio medio de la Tierra (m), para el haversine de [metersBetween]. */
@@ -268,6 +298,14 @@ export interface RefreshAndMatchOsmCamerasInput {
    * de [refreshAndMatchOsmCameras] (revisión de la Task 4, hallazgo Important #2).
    */
   writeCache: (cache: OsmCameraCache) => Promise<void>;
+  /**
+   * `true` fuerza el refresco ignorando antigüedad y ventana diaria (item 7 del repaso final: la
+   * opción de CLI `--refresh-osm-cache`, pensada para sembrar la caché en local). `false` por
+   * defecto: se sigue la regla de siempre (caché caducada Y ventana diaria de mantenimiento).
+   */
+  forceRefresh?: boolean;
+  /** Reloj de pared para el presupuesto agregado de Overpass; ver [refreshOsmCameras]. */
+  clockMs?: () => number;
 }
 
 export interface RefreshAndMatchOsmCamerasResult {
@@ -279,16 +317,27 @@ export interface RefreshAndMatchOsmCamerasResult {
   refreshed: boolean;
   queried: number;
   failed: number;
+  /** `true` si el presupuesto de [OSM_REFRESH_BUDGET_MS] se agotó antes de acabar las celdas. */
+  budgetExceeded: boolean;
+  /**
+   * La caché EFECTIVAMENTE usada para el cruce -la refrescada si `refreshed`, la recibida en
+   * `input.cache` si no-. Item 7 del repaso final: quien llama (`cli.ts`) la publica en
+   * `out/osm-cameras.json` en CADA vuelta, no solo en las que refrescan (el deploy de GitHub Pages
+   * sustituye el sitio entero, así que si no se escribiera siempre el fichero desaparecería de la
+   * publicación en la primera vuelta que no refresca).
+   */
+  cache: OsmCameraCache;
   /** Mensaje del fallo si `writeCache` ha lanzado; ausente si no se ha intentado o ha ido bien. */
   cacheWriteError?: string;
 }
 
 /**
  * Orquesta una vuelta completa: refresca la caché si toca (decisión M10: más de
- * [OSM_CACHE_MAX_AGE_DAYS] días Y ventana diaria de mantenimiento, `isDailyMaintenanceWindow`) y
- * cruza los radares con ella. Recibe la red (`fetchCell`) y el disco (`writeCache`) como
- * parámetros, igual que [refreshOsmCameras]: los tests nunca tocan Overpass ni el sistema de
- * ficheros.
+ * [OSM_CACHE_MAX_AGE_DAYS] días Y ventana diaria de mantenimiento, `isDailyMaintenanceWindow`; o
+ * `input.forceRefresh`, que salta las dos condiciones -item 7 del repaso final, la opción de CLI
+ * `--refresh-osm-cache` para sembrar la caché en local-) y cruza los radares con ella. Recibe la
+ * red (`fetchCell`) y el disco (`writeCache`) como parámetros, igual que [refreshOsmCameras]: los
+ * tests nunca tocan Overpass ni el sistema de ficheros.
  *
  * El cruce ([matchOsmCameras]) se calcula SIEMPRE con la caché ya refrescada EN MEMORIA, antes de
  * intentar persistirla en disco: si `writeCache` falla (disco lleno, permisos, ruta de solo
@@ -301,20 +350,38 @@ export async function refreshAndMatchOsmCameras(
   input: RefreshAndMatchOsmCamerasInput,
 ): Promise<RefreshAndMatchOsmCamerasResult> {
   if (input.radares.length === 0) {
-    return { radares: input.radares, matched: 0, tooFar: 0, withoutOsmData: 0, refreshed: false, queried: 0, failed: 0 };
+    return {
+      radares: input.radares,
+      matched: 0,
+      tooFar: 0,
+      withoutOsmData: 0,
+      refreshed: false,
+      queried: 0,
+      failed: 0,
+      budgetExceeded: false,
+      cache: input.cache,
+    };
   }
   let cache = input.cache;
   let refreshed = false;
   let queried = 0;
   let failed = 0;
+  let budgetExceeded = false;
   let cacheWriteError: string | undefined;
-  if (osmCacheIsStale(cache, input.now) && isDailyMaintenanceWindow(input.now)) {
+  if (input.forceRefresh || (osmCacheIsStale(cache, input.now) && isDailyMaintenanceWindow(input.now))) {
     refreshed = true;
     const celdas = cellsWithRadares(input.radares);
-    const refresco = await refreshOsmCameras({ cells: celdas, cache, now: input.now, fetchCell: input.fetchCell });
+    const refresco = await refreshOsmCameras({
+      cells: celdas,
+      cache,
+      now: input.now,
+      fetchCell: input.fetchCell,
+      clockMs: input.clockMs,
+    });
     cache = refresco.cache;
     queried = refresco.queried;
     failed = refresco.failed;
+    budgetExceeded = refresco.budgetExceeded;
     if (refresco.queried > 0) {
       try {
         await input.writeCache(cache);
@@ -332,6 +399,8 @@ export async function refreshAndMatchOsmCameras(
     refreshed,
     queried,
     failed,
+    budgetExceeded,
+    cache,
     ...(cacheWriteError ? { cacheWriteError } : {}),
   };
 }

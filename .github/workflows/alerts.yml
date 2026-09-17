@@ -19,6 +19,7 @@ jobs:
       SUPABASE_SECRET_KEY: ${{ secrets.SUPABASE_SECRET_KEY }}
       PREV_META: https://novaqlabs.github.io/copiloto-alerts/meta.json
       PREV_ESTADO: https://novaqlabs.github.io/copiloto-alerts/trafico/estado.json
+      PREV_OSM_CAMERAS: https://novaqlabs.github.io/copiloto-alerts/osm-cameras.json
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -26,7 +27,7 @@ jobs:
           node-version: 24
           cache: npm
       - run: npm ci
-      - run: node src/cli.ts run --out out --prev-meta "$PREV_META" --prev-estado "$PREV_ESTADO"
+      - run: node src/cli.ts run --out out --prev-meta "$PREV_META" --prev-estado "$PREV_ESTADO" --prev-osm-cameras "$PREV_OSM_CAMERAS"
       - uses: actions/configure-pages@v5
       - uses: actions/upload-pages-artifact@v3
         with:
